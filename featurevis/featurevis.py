@@ -20,7 +20,7 @@ def add_noise(img, noise, pctg):
     :return: the altered image
     """
     if noise:
-        if global_constants.model_info["name"] == global_constants.INCEPTIONV1["name"]:
+        if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
             img_noise = tf.random.uniform(
                 (1, 3, global_constants.IMG_WIDTH, global_constants.IMG_HEIGHT),
                 dtype=tf.dtypes.float32)
@@ -144,9 +144,9 @@ def compute_loss(input_image, filter_index):
     :param filter_index: The index of the filter that should be visualised
     :return: The mean activation of the filter within he given layer
     """
-    activation = global_constants.feature_extractor(input_image)
+    activation = global_constants.FEATURE_EXTRACTOR(input_image)
     # We avoid border artifacts by only involving non-border pixels in the loss.
-    if global_constants.model_info["name"] == global_constants.INCEPTIONV1["name"]:
+    if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
         filter_activation = activation[:, filter_index, 2:-2, 2:-2]
     else:
         filter_activation = activation[:, 2:-2, 2:-2, filter_index]
@@ -207,13 +207,13 @@ def show_activations(img, images_per_row=10):
     :param images_per_row: Changes the structure of the visualised plot
     """
     layer_outputs = [
-        layer.output for layer in global_constants.model.layers[:]]
+        layer.output for layer in global_constants.MODEL.layers[:]]
     # Extracts the outputs of the top 12 layers
-    activation_model = keras.models.Model(inputs=global_constants.model.input,
+    activation_model = keras.models.Model(inputs=global_constants.MODEL.input,
                                           outputs=layer_outputs)
     # Creates a model that will return these outputs, given the model input
     layer_names = []
-    for layer in global_constants.model.layers[:]:
+    for layer in global_constants.MODEL.layers[:]:
         layer_names.append(layer.name)
 
     for layer_name, layer_activation \

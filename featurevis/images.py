@@ -27,10 +27,10 @@ def initialize_image(width, height):
         img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
     # rescale values to be in the middle quarter of possible values
     img = (img - 0.5) * 0.25 + 0.5
-    val_range = global_constants.model_info["range_top"] - \
-        global_constants.model_info["range_bot"]
+    val_range = global_constants.MODEL_INFO["range_top"] - \
+        global_constants.MODEL_INFO["range_bot"]
     # rescale values to be in the given range of values
-    img = global_constants.model_info["range_bot"] + img * val_range
+    img = global_constants.MODEL_INFO["range_bot"] + img * val_range
     return img
 
 
@@ -50,7 +50,7 @@ def deprocess_image(img):
     img *= 0.15
 
     # Center crop
-    if global_constants.model_info["name"] == global_constants.INCEPTIONV1["name"]:
+    if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
         img = img[:, 25:-25, 25:-25]
     else:
         img = img[25:-25, 25:-25, :]
@@ -72,7 +72,7 @@ def save_image(img, name=None):
     :param img: The generated image
     :param name: A possible name, if none given it is auto generated
     """
-    if global_constants.model_info["name"] == global_constants.INCEPTIONV1["name"]:
+    if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
         img = tf.transpose(img, [2, 0, 1])
     arr = keras.preprocessing.image.img_to_array(img)
     name = datetime.now().isoformat().replace("-", "").replace(":", "")\

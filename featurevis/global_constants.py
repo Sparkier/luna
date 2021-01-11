@@ -3,6 +3,7 @@ This file acts as a central storage for all global variables within the scope
 the application
 """
 import sys
+import keras
 
 this = sys.modules[__name__]
 
@@ -37,7 +38,7 @@ MODEL_INFO = RESNET50V2
 MAIN_IMG = None
 MODEL = None
 LAYER = None
-FEATURE_EXTRACTOR = None
+FEATURE_EXTRACTOR = keras.Model()
 ITERATIONS = None
 LEARNING_RATE = None
 WRITER = None
