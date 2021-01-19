@@ -3,8 +3,6 @@ The main file for the feature vis process
 """
 import tensorflow as tf
 from tensorflow import keras
-import numpy as np
-from matplotlib import pyplot as plt
 
 from luna.featurevis import images as imgs
 
@@ -16,7 +14,8 @@ def add_noise(img, noise, pctg, channels_first=False):
         img (list): the image data to which noise should be added
         noise (boolean): whether noise should be added at all
         pctg (number): how much noise should be added to the image
-        channels_first (bool, optional): whether the image is encoded channels first. Defaults to False.
+        channels_first (bool, optional): whether the image is encoded channels
+        first. Defaults to False.
 
     Returns:
         list: the modified image
@@ -110,13 +109,13 @@ def visualize_filter(image, model, layer, filter_index, iterations,
         layer (string): the name of the layer to be used in the visualization
         filter_index (number): the index of the filter to be visualized
         iterations (number): hoe many iterations to optimize for
-        learning_rate (number): how much to update the image after each iteration
+        learning_rate (number): update amount after each iteration
         noise (number): how much noise to add to the image
         blur (number): how much blur to add to the image
         scale (number): how much to scale the image
 
     Returns:
-        [type]: [description]
+        tuple: loss and result image for the process
     """
     feature_extractor = get_feature_extractor(model, layer)
     print('Starting Feature Vis Process')
@@ -136,6 +135,18 @@ def visualize_filter(image, model, layer, filter_index, iterations,
 
 
 def compute_loss(input_image, model, filter_index, channels_first=False):
+    """Computes the loss for the feature visualization process.
+
+    Args:
+        input_image (array): the image that is used to compute the loss
+        model (object): the model on which to compute the loss
+        filter_index (number): for which filter to compute the loss
+        channels_first (bool, optional): Whether the image is channels first.
+        Defaults to False.
+
+    Returns:
+        number: the loss for the specified setting
+    """
     activation = model(input_image)
     # We avoid border artifacts by only involving non-border pixels in the loss.
     if channels_first:
@@ -147,6 +158,19 @@ def compute_loss(input_image, model, filter_index, channels_first=False):
 
 @tf.function
 def gradient_ascent_step(img, model, filter_index, learning_rate, channels_first=False):
+    """Performing one step of gradient ascend.
+
+    Args:
+        img (array): the image to be changed by the gradiend ascend
+        model (object): the model with which to perform the image change
+        filter_index (number): which filter to optimize for
+        learning_rate (number): how much to change the image per iteration
+        channels_first (bool, optional): Whether the image is channels first.
+        Defaults to False.
+
+    Returns:
+        tuple: the loss and the modified image
+    """
     with tf.GradientTape() as tape:
         tape.watch(img)
         loss = compute_loss(img, model, filter_index, channels_first)

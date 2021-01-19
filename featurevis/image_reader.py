@@ -2,7 +2,6 @@
 A utility file that takes all numpy arrays in the input folder and saves
 them as pngs in the output folder
 """
-import re
 from pathlib import Path
 import numpy as np
 from tensorflow import keras
