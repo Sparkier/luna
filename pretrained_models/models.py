@@ -18,8 +18,6 @@ def get_model(model_name):
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
     if model_name == "resnet50v2":
         return keras.applications.ResNet50V2(weights="imagenet", include_top=False)
-    if model_name == "vgg16":
-        return keras.applications.VGG16(weights="imagenet", include_top=False)
     if model_name == "inceptionV3":
         return keras.applications.InceptionV3(weights="imagenet", include_top=False)
     if model_name == "googlenet":
@@ -28,3 +26,4 @@ def get_model(model_name):
     if model_name == "inceptionV1slim":
         inputs = tf.random.uniform((1, 224, 224, 3), dtype=tf.dtypes.float32)
         return slim_nets.inception.inception_v1(inputs)
+    return keras.applications.VGG16(weights="imagenet", include_top=False)
