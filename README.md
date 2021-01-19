@@ -21,7 +21,6 @@ loss, image = featurevis.visualize_filter(image, model, "mixed6", 10, 200, 1, 0,
 print(loss)
 images.save_image(image, name="test")
 image_reader.save_npy_as_png("test.npy")
-
 ```
 
 ## Recomended Reading
