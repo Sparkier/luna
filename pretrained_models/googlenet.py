@@ -3,7 +3,7 @@ A Keras Implementation of the GoogleNet (InceptionV1) from
 https://gist.github.com/joelouismarino/a2ede9ab3928f999575423b9887abd14
 """
 # pylint: skip-file
-from __future__ import print_function
+import os
 from keras import backend as K
 from keras.utils.conv_utils import convert_kernel
 import tensorflow as tf
@@ -430,7 +430,8 @@ def create_googlenet(weights_path=None):
                                              loss2_classifier_act,
                                              loss3_classifier_act])
 
-    googlenet.load_weights('./util/pretrained_models/googlenet_weights.h5')
+    googlenet.load_weights(os.path.join(
+        os.path.dirname(__file__), 'googlenet_weights.h5'))
 
     if keras.backend.backend() == 'tensorflow':
         # convert the convolutional kernels for tensorflow

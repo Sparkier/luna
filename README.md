@@ -5,6 +5,25 @@ While Lucid is not supporting Tensorflow 2, and thus misses out on many modern f
 
 **Luna is under active development. It is not production-ready research code and misses many features of Lucid.**
 
+## Usage
+
+You can use this package directly with your code.
+If you place this package next to your python file, you can use it like this in your file:
+
+```
+from luna.pretrained_models import models
+from luna.featurevis import featurevis, images, image_reader
+
+model = models.get_model("inceptionV3")
+# model.summary()
+image = images.initialize_image(224, 224)
+loss, image = featurevis.visualize_filter(image, model, "mixed6", 10, 200, 1, 0, 0, 0)
+print(loss)
+images.save_image(image, name="test")
+image_reader.save_npy_as_png("test.npy")
+
+```
+
 ## Recomended Reading
 
 - [Feature Visualization](https://distill.pub/2017/feature-visualization/)
