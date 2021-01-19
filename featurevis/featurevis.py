@@ -3,31 +3,30 @@ The main file for the feature vis process
 """
 import tensorflow as tf
 from tensorflow import keras
-import numpy as np
-from matplotlib import pyplot as plt
 
 from luna.featurevis import images as imgs
-from luna.featurevis import global_constants
 
 
-def add_noise(img, noise, pctg):
-    """
-    if noise is true will add random noise values to the current image
+def add_noise(img, noise, pctg, channels_first=False):
+    """Adds noise to the image to be manipulated.
 
-    :param img: the current state of the feature vis image
-    :param noise: true, if noise should be added
-    :param pctg: the amount of noise in percentage
-    :return: the altered image
+    Args:
+        img (list): the image data to which noise should be added
+        noise (boolean): whether noise should be added at all
+        pctg (number): how much noise should be added to the image
+        channels_first (bool, optional): whether the image is encoded channels
+        first. Defaults to False.
+
+    Returns:
+        list: the modified image
     """
     if noise:
-        if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
-            img_noise = tf.random.uniform(
-                (1, 3, global_constants.IMG_WIDTH, global_constants.IMG_HEIGHT),
-                dtype=tf.dtypes.float32)
+        if channels_first:
+            img_noise = tf.random.uniform((1, 3, len(img[2]), len(img[3])),
+                                          dtype=tf.dtypes.float32)
         else:
-            img_noise = tf.random.uniform(
-                (1, global_constants.IMG_WIDTH, global_constants.IMG_HEIGHT, 3),
-                dtype=tf.dtypes.float32)
+            img_noise = tf.random.uniform((1, len(img[1]), len(img[2]), 3),
+                                          dtype=tf.dtypes.float32)
         img_noise = (img_noise - 0.5) * 0.25 * ((100 - pctg) / 100)
         img = img + img_noise
         img = tf.clip_by_value(img, -1, 1)
@@ -35,13 +34,15 @@ def add_noise(img, noise, pctg):
 
 
 def blur_image(img, blur, pctg):
-    """
-    if blur is true will gaussian blur the current image
+    """Gaussian blur the image to be modified.
 
-    :param img: the current state of the feature vis image
-    :param blur: true, if blur should be added
-    :param pctg: the amount of blur in percentage
-    :return: the altered image
+    Args:
+        img (list): the image to be blurred
+        blur (boolean): whether to blur the image
+        pctg (number): how much blur should be applied
+
+    Returns:
+        list: the blurred image
     """
     if blur:
         img = gaussian_blur(img, sigma=0.001 + ((100-pctg) / 100) * 1)
@@ -98,55 +99,57 @@ def gaussian_blur(img, kernel_size=3, sigma=5):
                                   padding='SAME', data_format='NHWC')
 
 
-def visualize_filter(filter_index, noise, blur, scale):
+def visualize_filter(image, model, layer, filter_index, iterations,
+                     learning_rate, noise, blur, scale, channels_first=False):
+    """Create a feature visualization for a filter in a layer of the model.
+
+    Args:
+        image (array): the image to be modified by the feature vis process
+        model (object): the model to be used for the feature visualization
+        layer (string): the name of the layer to be used in the visualization
+        filter_index (number): the index of the filter to be visualized
+        iterations (number): hoe many iterations to optimize for
+        learning_rate (number): update amount after each iteration
+        noise (number): how much noise to add to the image
+        blur (number): how much blur to add to the image
+        scale (number): how much to scale the image
+
+    Returns:
+        tuple: loss and result image for the process
     """
-    The outer function that sets up the remaining objects and calls the
-    feature vis methods
-
-    :param filter_index: the index of the filter (channel)
-      that should be visualized
-    :param noise: true, if noise should be used in the process
-    :param blur: true, if the image should be blurred to reduce high frequencies
-    :param scale: true, if rescaling should be applied each step
-
-    :return: The loss matrix of the training process and
-      the visualisation of the filter
-    """
-    # We run gradient ascent for 20 steps
-    currpctg = 0
-    global_constants.MAIN_IMG = imgs.initialize_image(
-        global_constants.IMG_WIDTH, global_constants.IMG_HEIGHT)
-    img = global_constants.MAIN_IMG
-
+    feature_extractor = get_feature_extractor(model, layer)
     print('Starting Feature Vis Process')
-    for iteration in range(global_constants.ITERATIONS):
-        pctg = int(iteration / global_constants.ITERATIONS * 100)
-        img = add_noise(img, noise, pctg)
-        img = blur_image(img, blur, pctg)
-        img = rescale_image(img, scale, pctg)
-        loss, img = gradient_ascent_step(
-            img, filter_index, global_constants.LEARNING_RATE)
-        if pctg >= currpctg:
-            print('>>', currpctg, '%')
-            currpctg += 10
+    for iteration in range(iterations):
+        pctg = int(iteration / iterations * 100)
+        image = add_noise(image, noise, pctg, channels_first)
+        image = blur_image(image, blur, pctg)
+        image = rescale_image(image, scale, pctg)
+        loss, image = gradient_ascent_step(
+            image, feature_extractor, filter_index, learning_rate)
+        print('>>', pctg, '%', end="\r", flush=True)
+
     print('>> 100 %')
-    # print(img)
     # Decode the resulting input image
-    img = imgs.deprocess_image(img[0].numpy())
-    return loss, img
+    image = imgs.deprocess_image(image[0].numpy())
+    return loss, image
 
 
-def compute_loss(input_image, filter_index):
+def compute_loss(input_image, model, filter_index, channels_first=False):
+    """Computes the loss for the feature visualization process.
+
+    Args:
+        input_image (array): the image that is used to compute the loss
+        model (object): the model on which to compute the loss
+        filter_index (number): for which filter to compute the loss
+        channels_first (bool, optional): Whether the image is channels first.
+        Defaults to False.
+
+    Returns:
+        number: the loss for the specified setting
     """
-    Calculates the Loss when activating the filter with the given image
-
-    :param input_image: The current state of the created feature image
-    :param filter_index: The index of the filter that should be visualised
-    :return: The mean activation of the filter within he given layer
-    """
-    activation = global_constants.FEATURE_EXTRACTOR(input_image)
+    activation = model(input_image)
     # We avoid border artifacts by only involving non-border pixels in the loss.
-    if global_constants.MODEL_INFO["name"] == global_constants.INCEPTIONV1["name"]:
+    if channels_first:
         filter_activation = activation[:, filter_index, 2:-2, 2:-2]
     else:
         filter_activation = activation[:, 2:-2, 2:-2, filter_index]
@@ -154,20 +157,23 @@ def compute_loss(input_image, filter_index):
 
 
 @tf.function
-def gradient_ascent_step(img, filter_index, learning_rate):
-    """
-    The feature extraction through gradient ascent. The image is sent through
-    the given filter, a loss is calculated and the image is adjusted to the
-    outcome
+def gradient_ascent_step(img, model, filter_index, learning_rate, channels_first=False):
+    """Performing one step of gradient ascend.
 
-    :param img: The current state of the created feature image
-    :param filter_index: the index of the filter that should be visualised
-    :param learning_rate: The rate of how much the image should be adjusted in
-      each training step
+    Args:
+        img (array): the image to be changed by the gradiend ascend
+        model (object): the model with which to perform the image change
+        filter_index (number): which filter to optimize for
+        learning_rate (number): how much to change the image per iteration
+        channels_first (bool, optional): Whether the image is channels first.
+        Defaults to False.
+
+    Returns:
+        tuple: the loss and the modified image
     """
     with tf.GradientTape() as tape:
         tape.watch(img)
-        loss = compute_loss(img, filter_index)
+        loss = compute_loss(img, model, filter_index, channels_first)
     # Compute gradients.
     grads = tape.gradient(loss, img)
     # Normalize gradients.
@@ -176,68 +182,12 @@ def gradient_ascent_step(img, filter_index, learning_rate):
     return loss, img
 
 
-def set_learning_rate(rate):
-    """Sets a new learning rate"""
-    global_constants.learning_rate = rate
+def get_feature_extractor(model, layer_name):
+    """Builds a model that that returns the activation of the specified layer.
 
-
-def set_iterations(num):
-    """Sets a new value for the amount of iterations"""
-    global_constants.iterations = num
-
-
-def set_noise(use_noise):
-    """Sets a new value for the amount of iterations"""
-    global_constants.noise = use_noise
-
-
-def set_blur(use_blur):
-    """Sets a new value for the amount of iterations"""
-    global_constants.blur = use_blur
-
-
-# vgl https://github.com/gabrielpierobon/cnnshapes/blob/master/README.md
-def show_activations(img, images_per_row=10):
+    Args:
+        model (object): the model used as a basis for the feature extractor
+        layer (string): the layer at which to cap the original model
     """
-    A currently unused function for visualising the activations
-    of diefferent layers in the network when forward passing a generated
-    feature image into the net
-
-    :param img: The generated feature visualisation
-    :param images_per_row: Changes the structure of the visualised plot
-    """
-    layer_outputs = [
-        layer.output for layer in global_constants.MODEL.layers[:]]
-    # Extracts the outputs of the top 12 layers
-    activation_model = keras.models.Model(inputs=global_constants.MODEL.input,
-                                          outputs=layer_outputs)
-    # Creates a model that will return these outputs, given the model input
-    layer_names = []
-    for layer in global_constants.MODEL.layers[:]:
-        layer_names.append(layer.name)
-
-    for layer_name, layer_activation \
-            in zip(layer_names, activation_model.predict(img)):
-        if not layer_name.startswith("mixed"):
-            print(layer_name, " has been skipped")
-            continue
-        size = layer_activation.shape[1]
-        n_cols = layer_activation.shape[-1] // images_per_row
-        display_grid = np.zeros((size * n_cols, images_per_row * size))
-        for col in range(n_cols):
-            for row in range(images_per_row):
-                channel_image = layer_activation[0,
-                                                 :, :, col * images_per_row + row]
-                channel_image -= channel_image.mean()
-                channel_image /= channel_image.std()
-                channel_image *= 64
-                channel_image += 128
-                channel_image = np.clip(channel_image, 0, 255).astype('uint8')
-                display_grid[col * size: (col + 1) * size,
-                             row * size: (row + 1) * size] = channel_image
-        plt.figure(figsize=(1. / size * display_grid.shape[1],
-                            1. / size * display_grid.shape[0]))
-        plt.title(layer_name)
-        plt.grid(False)
-        plt.imshow(display_grid, aspect='auto', cmap='inferno')
-    plt.show()
+    layer = model.get_layer(name=layer_name)
+    return keras.Model(inputs=model.inputs, outputs=layer.output)
