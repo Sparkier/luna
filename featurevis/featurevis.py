@@ -1,10 +1,11 @@
 """
 The main file for the feature vis process
 """
+
 import tensorflow as tf
 from tensorflow import keras
 
-from luna.featurevis import images as imgs
+from featurevis import images as imgs
 
 
 def add_noise(img, noise, pctg, channels_first=False):
@@ -131,7 +132,7 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     print('>> 100 %')
     # Decode the resulting input image
     image = imgs.deprocess_image(image[0].numpy())
-    return loss, image
+    return loss, image, layer, filter_index
 
 
 def compute_loss(input_image, model, filter_index, channels_first=False):
