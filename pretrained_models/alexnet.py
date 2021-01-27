@@ -1,5 +1,5 @@
 """
-A Keras Implementation of the GoogleNet (InceptionV1) from
+A Keras Implementation for Alexnet from
 https://github.com/heuritech/convnets-keras/blob/master/convnetskeras/convnets.py
 
 """
@@ -181,7 +181,3 @@ def AlexNet(weights_path=None, heatmap=False):
     return model
 
 
-if __name__ == "__main__":
-    # Test pretrained model
-    model = AlexNet('alexnet_weights.h5')
-    model.summary()

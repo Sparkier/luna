@@ -30,7 +30,7 @@ def get_model(model_name):
     if model_name == "VGG16":
         return keras.applications.vgg16(weights= "imagenet", include_top=False)
     if model_name == "alexnet":
-        return alexnet.AlexNet()
+        return alexnet.AlexNet("alexnet_weights.h5")
     else:
         print("Model is not specified")
         

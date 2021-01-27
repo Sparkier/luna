@@ -132,7 +132,7 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     print('>> 100 %')
     # Decode the resulting input image
     image = imgs.deprocess_image(image[0].numpy())
-    return loss, image, layer, filter_index
+    return loss, image
 
 
 def compute_loss(input_image, model, filter_index, channels_first=False):
