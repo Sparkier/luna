@@ -159,6 +159,7 @@ pythonenv*
 
 # Pretrained models weights
 .h5
+.mat
 
 
 # mypy
@@ -174,6 +175,11 @@ dmypy.json
 
 # profiling data
 .prof
+
+#output/input files
+.png
+.npy
+
 
 ### VisualStudioCode ###
 .vscode/*
