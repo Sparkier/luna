@@ -179,6 +179,7 @@ dmypy.json
 #output/input files
 .png
 .npy
+/output
 
 
 ### VisualStudioCode ###
