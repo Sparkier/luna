@@ -6,9 +6,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tf_slim import nets as slim_nets
 
-from pretrained_models import googlenet
-from pretrained_models import alexnet
-
+from luna.pretrained_models import googlenet
+from luna.pretrained_models import alexnet
 
 def get_model(model_name):
     """
