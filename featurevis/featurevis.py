@@ -3,10 +3,9 @@ The main file for the feature vis process
 """
 from __future__ import absolute_import, division, print_function
 import tensorflow as tf
-import numpy as np
+
 from tensorflow import keras
 from luna.featurevis import images as imgs
-
 
 
 
@@ -134,9 +133,6 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     print('>> 100 %')
     # Decode the resulting input image
     image = imgs.deprocess_image(image[0].numpy())
-    print(image.shape)
-    print(image)
-    # conver the proceed image to a valid rgb color
     return loss, image
 
 
@@ -180,11 +176,10 @@ def gradient_ascent_step(img, model, filter_index, learning_rate, channels_first
     with tf.GradientTape() as tape:
         tape.watch(img)
         loss = compute_loss(img, model, filter_index, channels_first)
-        #loss_prop = tf.reduce_sum(img, axis=-1)
     # Compute gradients.
     grads = tape.gradient(loss, img)
     # Normalize gradients.
-    #grads = tf.math.l2_normalize(grads)
+    grads = tf.math.l2_normalize(grads)
     img += learning_rate * grads
     return loss, img
 
