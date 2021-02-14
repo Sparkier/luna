@@ -32,7 +32,7 @@ def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
     return img
 
 
-def deprocess_image(img, channels_first=False):
+def deprocess_image(img):
     """
     Takes the values of an image array and normalizes them to be in the
     standard 0-255 RGB range
@@ -42,24 +42,12 @@ def deprocess_image(img, channels_first=False):
     :return: A rescaled version of the image
     """
     print('Deprocessing image')
-    # Normalize array: center on 0., ensure variance is 0.15
-    img -= img.mean()
-    img /= img.std() + 1e-5
-    img *= 0.15
-
-    # Center crop
-    if channels_first:
-        img = img[:, 25:-25, 25:-25]
-    else:
-        img = img[25:-25, 25:-25, :]
-
-    # Clip to [0, 1]
-    img += 0.5
-    img = np.clip(img, 0, 1)
+    # Normalize array between 0 and 1
+    img = (img - np.min(img)) / (np.max(img) - np.min(img))
 
     # Convert to RGB array
     img *= 255
-    img = np.clip(img, 0, 255).astype("uint8")
+    img = img.astype("uint8")
     return img
 
 
