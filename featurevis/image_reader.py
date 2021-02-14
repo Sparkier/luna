@@ -8,7 +8,7 @@ import numpy as np
 from tensorflow import keras
 
 
-def save_npy_as_png(input_path, output_path = "luna/outputs"):
+def save_npy_as_png(input_path, output_path):
     """Saves a numpy image as a png given an image path.
 
     Args:

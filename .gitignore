@@ -176,6 +176,9 @@ dmypy.json
 # profiling data
 .prof
 
+#AlexNet logs
+report.txt
+
 #output/input files
 .png
 .npy
