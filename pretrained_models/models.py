@@ -9,7 +9,9 @@ from tf_slim import nets as slim_nets
 from luna.pretrained_models import googlenet
 from luna.pretrained_models import alexnet
 
-def model_resnet50V2():
+
+
+def model_resnet50v2():
     """
     Instantiates ResNet50V2 architecture using keras
 
@@ -20,7 +22,7 @@ def model_resnet50V2():
     return keras.applications.ResNet50V2(weights="imagenet", include_top=False)
 
 
-def model_inceptionV3():
+def model_inceptionv3():
     """
     Instantiates InceptionV3 architecture using keras
 
@@ -31,7 +33,7 @@ def model_inceptionV3():
     return keras.applications.InceptionV3(weights="imagenet", include_top=False)
 
 
-def model_inceptionV1():
+def model_inceptionv1():
     """
     Instantiates InceptionV1 architecture using googlnet
 
@@ -40,9 +42,9 @@ def model_inceptionV1():
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_first')
     return googlenet.create_googlenet()
- 
-    
-def model_inceptionV1_slim():
+
+
+def model_inceptionv1_slim():
     """
     Instantiates InceptionV1 architecture using tensorflow slim
 
@@ -72,5 +74,4 @@ def model_alexnet():
         alexnet: AlexNet Architecture
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return  alexnet.AlexNet("alexnet_weights.h5")
-
+    return alexnet.alex_net("alexnet_weights.h5")

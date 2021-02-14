@@ -3,26 +3,16 @@ A Keras Implementation for Alexnet from
 https://github.com/heuritech/convnets-keras/blob/master/convnetskeras/convnets.py
 
 """
+from os.path import dirname, join
 
-from keras.layers import Activation
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import Flatten
-from keras.layers import Input
-from keras.layers import merge
-from keras.layers.convolutional import Convolution2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.layers.convolutional import ZeroPadding2D
-from keras.models import Model
-from keras.models import Sequential
-from keras.optimizers import SGD
 from keras import backend as K
 from keras.engine import Layer
-from keras.layers.convolutional import Convolution2D
-from keras.layers.core import Lambda
-from keras.layers import merge # changed from keras.layers.core.Merge to keras.layers.merge
-from os.path import dirname
-from os.path import join
+from keras.layers import (Activation, Dense, Dropout, Flatten, Input,
+                          concatenate)
+from keras.layers.convolutional import (Convolution2D, MaxPooling2D,
+                                        ZeroPadding2D)
+from keras.layers import Lambda
+from keras.models import Model
 from scipy.io import loadmat
 
 meta_clsloc_file = join(dirname(__file__), 'data', 'meta_clsloc.mat')
@@ -30,71 +20,83 @@ synsets = loadmat(meta_clsloc_file)['synsets'][0]
 synsets_imagenet_sorted = sorted([(int(s[0]), str(s[1][0])) for s in synsets[:1000]],
                                  key=lambda v: v[1])
 
+# pylint: disable=unnecessary-lambda
+# pylint: disable=arguments-differ
 
-def crosschannelnormalization(alpha=1e-4, k=2, beta=0.75, n=5, **kwargs):
+def cross_channel_normalization(alpha=1e-4, k=2, beta=0.75, num=5, **kwargs):
     """
     This is the function used for cross channel normalization in the original
     Alexnet
     """
 
-    def f(X):
-        b, ch, r, c = X.shape
-        half = n // 2
-        square = K.square(X)
+    def channel_norm(filt):
+        _, channel, _, _ = filt.shape
+        half = num // 2
+        square = K.square(filt)
         extra_channels = K.spatial_2d_padding(K.permute_dimensions(square, (0, 2, 3, 1))
                                               , (0, half))
         extra_channels = K.permute_dimensions(extra_channels, (0, 3, 1, 2))
         scale = k
-        for i in range(n):
-            scale += alpha * extra_channels[:, i:i + ch, :, :]
+        for i in range(num):
+            scale += alpha * extra_channels[:, i:i + channel, :, :]
         scale = scale ** beta
-        return X / scale
+        return filt / scale
 
-    return Lambda(f, output_shape=lambda input_shape: input_shape, **kwargs)
+    return Lambda(channel_norm, output_shape=lambda input_shape: input_shape, **kwargs)
 
 
 def splittensor(axis=1, ratio_split=1, id_split=0, **kwargs):
-    def f(X):
-        div = X.shape[axis] // ratio_split
+    """Function for splitting tensor
+
+    Args:
+        axis (int, optional): chosen axis. Defaults to 1.
+        ratio_split (int, optional): Ratio of split. Defaults to 1.
+        id_split (int, optional): Split index. Defaults to 0.
+    """
+    def split_tensor(tensor):
+        div = tensor.shape[axis] // ratio_split
 
         if axis == 0:
-            output = X[id_split * div:(id_split + 1) * div, :, :, :]
+            output = tensor[id_split * div:(id_split + 1) * div, :, :, :]
         elif axis == 1:
-            output = X[:, id_split * div:(id_split + 1) * div, :, :]
+            output = tensor[:, id_split * div:(id_split + 1) * div, :, :]
         elif axis == 2:
-            output = X[:, :, id_split * div:(id_split + 1) * div, :]
+            output = tensor[:, :, id_split * div:(id_split + 1) * div, :]
         elif axis == 3:
-            output = X[:, :, :, id_split * div:(id_split + 1) * div]
+            output = tensor[:, :, :, id_split * div:(id_split + 1) * div]
         else:
             raise ValueError('This axis is not possible')
 
         return output
 
-    def g(input_shape):
+    def reshape_tensor(input_shape):
         output_shape = list(input_shape)
         output_shape[axis] = output_shape[axis] // ratio_split
         return tuple(output_shape)
 
-    return Lambda(f, output_shape=lambda input_shape: g(input_shape), **kwargs)
+    return Lambda(split_tensor, output_shape=lambda input_shape:
+                  reshape_tensor(input_shape), **kwargs)
 
 
 class Softmax4D(Layer):
+    """Class for applying softmax on the desired Layer
+
+    Args:
+        Layer ([type]): The Layer to apply the Softmax to.
+    """
     def __init__(self, axis=-1, **kwargs):
         self.axis = axis
-        super(Softmax4D, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def build(self, input_shape):
         pass
 
-    def call(self, x, mask=None):
-        e = K.exp(x - K.max(x, axis=self.axis, keepdims=True))
-        s = K.sum(e, axis=self.axis, keepdims=True)
-        return e / s
+    def call(self, x):
+        exp = K.exp(x - K.max(x, axis=self.axis, keepdims=True))
+        sum_of_exp = K.sum(exp, axis=self.axis, keepdims=True)
+        return exp / sum_of_exp
 
-    def get_output_shape_for(self, input_shape):
-        return input_shape
-    
-  
+
 corr = {}
 for j in range(1000):
     corr[synsets_imagenet_sorted[j][0]] = j
@@ -102,8 +104,11 @@ for j in range(1000):
 corr_inv = {}
 for j in range(1, 1001):
     corr_inv[corr[j]] = j
-      
-def depthfirstsearch(id_, out=None):
+
+
+def depth_first_search(id_, out=None):
+    """Performs a depth first search
+    """
     if out is None:
         out = []
     if isinstance(id_, int):
@@ -113,17 +118,21 @@ def depthfirstsearch(id_, out=None):
 
     out.append(id_)
     children = synsets[id_ - 1][5][0]
-    for c in children:
-        depthfirstsearch(int(c), out)
+    for child in children:
+        depth_first_search(int(child), out)
     return out
 
 
 def synset_to_dfs_ids(synset):
-    ids = [x for x in depthfirstsearch(synset) if x <= 1000]
+    """Get index of the depth first search
+    """
+    ids = [x for x in depth_first_search(synset) if x <= 1000]
     ids = [corr[x] for x in ids]
     return ids
 
-def AlexNet(weights_path=None, heatmap=False):
+def alex_net(weights_path=None, heatmap=False):
+    """Generates the Network
+    """
     if heatmap:
         inputs = Input(shape=(3, None, None))
     else:
@@ -133,26 +142,26 @@ def AlexNet(weights_path=None, heatmap=False):
                            name='conv_1')(inputs)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(conv_1)
-    conv_2 = crosschannelnormalization(name='convpool_1')(conv_2)
+    conv_2 = cross_channel_normalization(name='convpool_1')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
-    conv_2 = merge([
+    conv_2 = concatenate([
                        Convolution2D(128, 5, 5, activation='relu', name='conv_2_' + str(i + 1))(
                            splittensor(ratio_split=2, id_split=i)(conv_2)
                        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_2')
 
     conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
-    conv_3 = crosschannelnormalization()(conv_3)
+    conv_3 = cross_channel_normalization()(conv_3)
     conv_3 = ZeroPadding2D((1, 1))(conv_3)
     conv_3 = Convolution2D(384, 3, 3, activation='relu', name='conv_3')(conv_3)
 
     conv_4 = ZeroPadding2D((1, 1))(conv_3)
-    conv_4 = merge([
+    conv_4 = concatenate([
                        Convolution2D(192, 3, 3, activation='relu', name='conv_4_' + str(i + 1))(
                            splittensor(ratio_split=2, id_split=i)(conv_4)
                        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_4')
 
     conv_5 = ZeroPadding2D((1, 1))(conv_4)
-    conv_5 = merge([
+    conv_5 = concatenate([
                        Convolution2D(128, 3, 3, activation='relu', name='conv_5_' + str(i + 1))(
                            splittensor(ratio_split=2, id_split=i)(conv_5)
                        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_5')
@@ -179,5 +188,3 @@ def AlexNet(weights_path=None, heatmap=False):
         model.load_weights(weights_path)
 
     return model
-
-
