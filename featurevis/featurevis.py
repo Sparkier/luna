@@ -1,9 +1,10 @@
 """
 The main file for the feature vis process
 """
+from __future__ import absolute_import, division, print_function
 import tensorflow as tf
-from tensorflow import keras
 
+from tensorflow import keras
 from luna.featurevis import images as imgs
 
 
@@ -23,10 +24,10 @@ def add_noise(img, noise, pctg, channels_first=False):
     if noise:
         if channels_first:
             img_noise = tf.random.uniform((1, 3, len(img[2]), len(img[3])),
-                                          dtype=tf.dtypes.float32)
+                                            dtype=tf.dtypes.float32)
         else:
             img_noise = tf.random.uniform((1, len(img[1]), len(img[2]), 3),
-                                          dtype=tf.dtypes.float32)
+                                            dtype=tf.dtypes.float32)
         img_noise = (img_noise - 0.5) * 0.25 * ((100 - pctg) / 100)
         img = img + img_noise
         img = tf.clip_by_value(img, -1, 1)
@@ -96,11 +97,12 @@ def gaussian_blur(img, kernel_size=3, sigma=5):
     gaussian_kernel = gaussian_kernel[..., tf.newaxis]
 
     return tf.nn.depthwise_conv2d(img, gaussian_kernel, [1, 1, 1, 1],
-                                  padding='SAME', data_format='NHWC')
+                                    padding='SAME', data_format='NHWC')
 
 
 def visualize_filter(image, model, layer, filter_index, iterations,
-                     learning_rate, noise, blur, scale, channels_first=False):
+                    learning_rate, noise, blur, scale, channels_first=False):
+                    # pylint: disable=too-many-arguments
     """Create a feature visualization for a filter in a layer of the model.
 
     Args:
