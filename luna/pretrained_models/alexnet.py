@@ -1,27 +1,15 @@
 """
 A Keras Implementation for Alexnet from
 https://github.com/heuritech/convnets-keras/blob/master/convnetskeras/convnets.py
-
 """
-from os.path import dirname, join
-
 from keras import backend as K
 from keras.engine import Layer
+from keras.models import Model
 from keras.layers import (Activation, Dense, Dropout, Flatten, Input,
-                          concatenate)
+                          concatenate, Lambda)
 from keras.layers.convolutional import (Convolution2D, MaxPooling2D,
                                         ZeroPadding2D)
-from keras.layers import Lambda
-from keras.models import Model
-from scipy.io import loadmat
 
-meta_clsloc_file = join(dirname(__file__), 'data', 'meta_clsloc.mat')
-synsets = loadmat(meta_clsloc_file)['synsets'][0]
-synsets_imagenet_sorted = sorted([(int(s[0]), str(s[1][0])) for s in synsets[:1000]],
-                                 key=lambda v: v[1])
-
-# pylint: disable=unnecessary-lambda
-# pylint: disable=arguments-differ
 
 def cross_channel_normalization(alpha=1e-4, k=2, beta=0.75, num=5, **kwargs):
     """
@@ -33,8 +21,8 @@ def cross_channel_normalization(alpha=1e-4, k=2, beta=0.75, num=5, **kwargs):
         _, channel, _, _ = filt.shape
         half = num // 2
         square = K.square(filt)
-        extra_channels = K.spatial_2d_padding(K.permute_dimensions(square, (0, 2, 3, 1))
-                                              , (0, half))
+        extra_channels = K.spatial_2d_padding(
+            K.permute_dimensions(square, (0, 2, 3, 1)), (0, half))
         extra_channels = K.permute_dimensions(extra_channels, (0, 3, 1, 2))
         scale = k
         for i in range(num):
@@ -74,8 +62,7 @@ def splittensor(axis=1, ratio_split=1, id_split=0, **kwargs):
         output_shape[axis] = output_shape[axis] // ratio_split
         return tuple(output_shape)
 
-    return Lambda(split_tensor, output_shape=lambda input_shape:
-                  reshape_tensor(input_shape), **kwargs)
+    return Lambda(split_tensor, output_shape=reshape_tensor, **kwargs)
 
 
 class Softmax4D(Layer):
@@ -84,6 +71,7 @@ class Softmax4D(Layer):
     Args:
         Layer ([type]): The Layer to apply the Softmax to.
     """
+
     def __init__(self, axis=-1, **kwargs):
         self.axis = axis
         super().__init__(**kwargs)
@@ -91,44 +79,11 @@ class Softmax4D(Layer):
     def build(self, input_shape):
         pass
 
-    def call(self, x):
-        exp = K.exp(x - K.max(x, axis=self.axis, keepdims=True))
+    def call(self, inputs, **kwargs):
+        exp = K.exp(inputs - K.max(inputs, axis=self.axis, keepdims=True))
         sum_of_exp = K.sum(exp, axis=self.axis, keepdims=True)
         return exp / sum_of_exp
 
-
-corr = {}
-for j in range(1000):
-    corr[synsets_imagenet_sorted[j][0]] = j
-
-corr_inv = {}
-for j in range(1, 1001):
-    corr_inv[corr[j]] = j
-
-
-def depth_first_search(id_, out=None):
-    """Performs a depth first search
-    """
-    if out is None:
-        out = []
-    if isinstance(id_, int):
-        pass
-    else:
-        id_ = next(int(s[0]) for s in synsets if s[1][0] == id_)
-
-    out.append(id_)
-    children = synsets[id_ - 1][5][0]
-    for child in children:
-        depth_first_search(int(child), out)
-    return out
-
-
-def synset_to_dfs_ids(synset):
-    """Get index of the depth first search
-    """
-    ids = [x for x in depth_first_search(synset) if x <= 1000]
-    ids = [corr[x] for x in ids]
-    return ids
 
 def alex_net(weights_path=None, heatmap=False):
     """Generates the Network
@@ -145,9 +100,9 @@ def alex_net(weights_path=None, heatmap=False):
     conv_2 = cross_channel_normalization(name='convpool_1')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
     conv_2 = concatenate([
-                       Convolution2D(128, 5, 5, activation='relu', name='conv_2_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_2)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name='conv_2')
+        Convolution2D(128, 5, 5, activation='relu', name='conv_2_' + str(i + 1))(
+            splittensor(ratio_split=2, id_split=i)(conv_2)
+        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_2')
 
     conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
     conv_3 = cross_channel_normalization()(conv_3)
@@ -156,21 +111,23 @@ def alex_net(weights_path=None, heatmap=False):
 
     conv_4 = ZeroPadding2D((1, 1))(conv_3)
     conv_4 = concatenate([
-                       Convolution2D(192, 3, 3, activation='relu', name='conv_4_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_4)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name='conv_4')
+        Convolution2D(192, 3, 3, activation='relu', name='conv_4_' + str(i + 1))(
+            splittensor(ratio_split=2, id_split=i)(conv_4)
+        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_4')
 
     conv_5 = ZeroPadding2D((1, 1))(conv_4)
     conv_5 = concatenate([
-                       Convolution2D(128, 3, 3, activation='relu', name='conv_5_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_5)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name='conv_5')
+        Convolution2D(128, 3, 3, activation='relu', name='conv_5_' + str(i + 1))(
+            splittensor(ratio_split=2, id_split=i)(conv_5)
+        ) for i in range(2)], mode='concat', concat_axis=1, name='conv_5')
 
     dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name='convpool_5')(conv_5)
 
     if heatmap:
-        dense_1 = Convolution2D(4096, 6, 6, activation='relu', name='dense_1')(dense_1)
-        dense_2 = Convolution2D(4096, 1, 1, activation='relu', name='dense_2')(dense_1)
+        dense_1 = Convolution2D(
+            4096, 6, 6, activation='relu', name='dense_1')(dense_1)
+        dense_2 = Convolution2D(
+            4096, 1, 1, activation='relu', name='dense_2')(dense_1)
         dense_3 = Convolution2D(1000, 1, 1, name='dense_3')(dense_2)
         prediction = Softmax4D(axis=1, name='softmax')(dense_3)
     else:

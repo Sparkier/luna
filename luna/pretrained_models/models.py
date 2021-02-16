@@ -10,7 +10,6 @@ from luna.pretrained_models import googlenet
 from luna.pretrained_models import alexnet
 
 
-
 def model_resnet50v2():
     """
     Instantiates ResNet50V2 architecture using keras
@@ -63,7 +62,7 @@ def model_vgg16():
         keras.application: vgg16 Architecture
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return keras.applications.VGG16(weights= "imagenet", include_top=False)
+    return keras.applications.VGG16(weights="imagenet", include_top=False)
 
 
 def model_alexnet():
