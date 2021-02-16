@@ -70,7 +70,7 @@ class LRN(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-def create_googlenet(weights_path=None):
+def create_googlenet():
     # creates GoogLeNet a.k.a. Inception v1 (Szegedy, 2015)
     input = Input(shape=(3, 224, 224))
 
@@ -442,9 +442,3 @@ def create_googlenet(weights_path=None):
                 tf.compat.v1.assign(layer.kernel, converted_w)
 
     return googlenet
-
-
-if __name__ == "__main__":
-    # Test pretrained model
-    model = create_googlenet('googlenet_weights.h5')
-    model.summary()
