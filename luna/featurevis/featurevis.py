@@ -8,7 +8,7 @@ from tensorflow import keras
 from luna.featurevis import images as imgs
 
 
-def add_noise(img, noise, pctg, channels_first=False):
+def add_noise(img, noise, pctg):
     """Adds noise to the image to be manipulated.
 
     Args:
@@ -22,7 +22,7 @@ def add_noise(img, noise, pctg, channels_first=False):
         list: the modified image
     """
     if noise:
-        if channels_first:
+        if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
             img_noise = tf.random.uniform((1, 3, len(img[2]), len(img[3])),
                                           dtype=tf.dtypes.float32)
         else:
@@ -101,7 +101,7 @@ def gaussian_blur(img, kernel_size=3, sigma=5):
 
 
 def visualize_filter(image, model, layer, filter_index, iterations,
-                     learning_rate, noise, blur, scale, channels_first=False):
+                     learning_rate, noise, blur, scale):
     """Create a feature visualization for a filter in a layer of the model.
 
     Args:
@@ -122,7 +122,7 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     print('Starting Feature Vis Process')
     for iteration in range(iterations):
         pctg = int(iteration / iterations * 100)
-        image = add_noise(image, noise, pctg, channels_first)
+        image = add_noise(image, noise, pctg)
         image = blur_image(image, blur, pctg)
         image = rescale_image(image, scale, pctg)
         loss, image = gradient_ascent_step(
@@ -135,7 +135,7 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     return loss, image
 
 
-def compute_loss(input_image, model, filter_index, channels_first=False):
+def compute_loss(input_image, model, filter_index):
     """Computes the loss for the feature visualization process.
 
     Args:
@@ -150,7 +150,7 @@ def compute_loss(input_image, model, filter_index, channels_first=False):
     """
     activation = model(input_image)
     # We avoid border artifacts by only involving non-border pixels in the loss.
-    if channels_first:
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         filter_activation = activation[:, filter_index, 2:-2, 2:-2]
     else:
         filter_activation = activation[:, 2:-2, 2:-2, filter_index]
@@ -158,7 +158,7 @@ def compute_loss(input_image, model, filter_index, channels_first=False):
 
 
 @tf.function
-def gradient_ascent_step(img, model, filter_index, learning_rate, channels_first=False):
+def gradient_ascent_step(img, model, filter_index, learning_rate):
     """Performing one step of gradient ascend.
 
     Args:
@@ -174,7 +174,7 @@ def gradient_ascent_step(img, model, filter_index, learning_rate, channels_first
     """
     with tf.GradientTape() as tape:
         tape.watch(img)
-        loss = compute_loss(img, model, filter_index, channels_first)
+        loss = compute_loss(img, model, filter_index)
     # Compute gradients.
     grads = tape.gradient(loss, img)
     # Normalize gradients.

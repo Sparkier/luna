@@ -51,16 +51,15 @@ def deprocess_image(img):
     return img
 
 
-def save_image(img, name=None, channels_first=False):
+def save_image(img, name=None):
     """
     Saves a generated image array as a numpy array in a file
-
     :param img: The generated image
     :param name: A possible name, if none given it is auto generated
     """
-    if channels_first:
-        img = tf.transpose(img, [2, 0, 1])
-    arr = keras.preprocessing.image.img_to_array(img)
+    #if (tf.compat.v1.keras.backend.image_data_format() == "channels_first"):
+    #    img = tf.transpose(img, [1, 2, 0])
+    arr = keras.preprocessing.image.img_to_array(img)#, data_format="channels_last")
     if name is None:
         name = datetime.now().isoformat()
         name = name.replace("-", "")
