@@ -2,13 +2,18 @@
 A Keras Implementation for Alexnet from
 https://github.com/heuritech/convnets-keras/blob/master/convnetskeras/convnets.py
 """
+from  pathlib import Path
 from keras import backend as K
 from keras.engine import Layer
 from keras.models import Model
 from keras.layers import (Activation, Dense, Dropout, Flatten, Input,
                           concatenate, Lambda)
-from keras.layers.convolutional import (Convolution2D, MaxPooling2D,
+from keras.layers.convolutional import (MaxPooling2D,
                                         ZeroPadding2D)
+from keras.utils.data_utils import get_file
+from tensorflow.keras.layers import Conv2D
+
+
 
 
 def cross_channel_normalization(alpha=1e-4, k=2, beta=0.75, num=5, **kwargs):
@@ -85,50 +90,50 @@ class Softmax4D(Layer):
         return exp / sum_of_exp
 
 
-def alex_net(weights_path=None, heatmap=False):
+def alex_net(user_weight_path = None, heatmap=False):
     """Generates the Network
     """
     if heatmap:
-        inputs = Input(shape=(3, None, None))
+        inputs = Input(shape=(None, None, 3))
     else:
-        inputs = Input(shape=(3, 227, 227))
+        inputs = Input(shape=(227, 227, 3))
 
-    conv_1 = Convolution2D(96, 11, 11, subsample=(4, 4), activation='relu',
+    conv_1 = Conv2D(96, 11,strides=(4, 4), activation='relu',
                            name='conv_1')(inputs)
 
     conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(conv_1)
     conv_2 = cross_channel_normalization(name='convpool_1')(conv_2)
     conv_2 = ZeroPadding2D((2, 2))(conv_2)
     conv_2 = concatenate([
-        Convolution2D(128, 5, 5, activation='relu', name='conv_2_' + str(i + 1))(
+        Conv2D(128, 5, 5, activation='relu', name='conv_2_' + str(i + 1))(
             splittensor(ratio_split=2, id_split=i)(conv_2)
         ) for i in range(2)], mode='concat', concat_axis=1, name='conv_2')
 
     conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
     conv_3 = cross_channel_normalization()(conv_3)
     conv_3 = ZeroPadding2D((1, 1))(conv_3)
-    conv_3 = Convolution2D(384, 3, 3, activation='relu', name='conv_3')(conv_3)
+    conv_3 = Conv2D(384, 3, 3, activation='relu', name='conv_3')(conv_3)
 
     conv_4 = ZeroPadding2D((1, 1))(conv_3)
     conv_4 = concatenate([
-        Convolution2D(192, 3, 3, activation='relu', name='conv_4_' + str(i + 1))(
+        Conv2D(192, 3, 3, activation='relu', name='conv_4_' + str(i + 1))(
             splittensor(ratio_split=2, id_split=i)(conv_4)
         ) for i in range(2)], mode='concat', concat_axis=1, name='conv_4')
 
     conv_5 = ZeroPadding2D((1, 1))(conv_4)
     conv_5 = concatenate([
-        Convolution2D(128, 3, 3, activation='relu', name='conv_5_' + str(i + 1))(
+        Conv2D(128, 3, 3, activation='relu', name='conv_5_' + str(i + 1))(
             splittensor(ratio_split=2, id_split=i)(conv_5)
         ) for i in range(2)], mode='concat', concat_axis=1, name='conv_5')
 
     dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name='convpool_5')(conv_5)
 
     if heatmap:
-        dense_1 = Convolution2D(
+        dense_1 = Conv2D(
             4096, 6, 6, activation='relu', name='dense_1')(dense_1)
-        dense_2 = Convolution2D(
+        dense_2 = Conv2D(
             4096, 1, 1, activation='relu', name='dense_2')(dense_1)
-        dense_3 = Convolution2D(1000, 1, 1, name='dense_3')(dense_2)
+        dense_3 = Conv2D(1000, 1, 1, name='dense_3')(dense_2)
         prediction = Softmax4D(axis=1, name='softmax')(dense_3)
     else:
         dense_1 = Flatten(name='flatten')(dense_1)
@@ -141,7 +146,15 @@ def alex_net(weights_path=None, heatmap=False):
 
     model = Model(input=inputs, output=prediction)
 
-    if weights_path:
-        model.load_weights(weights_path)
+    weights_path = Path(str(Path.home()) + r"~\.keras\datasets\alexnet_weights.h5")
 
+    if weights_path.is_file():
+        model.load_weights(weights_path)
+    elif user_weight_path:
+        model.load_weights(user_weight_path)
+    else:
+        weights_path = get_file(
+            'alexnet_weights.h5',
+            'http://files.heuritech.com/weights/alexnet_weights.h5')
+        model.load_weights(weights_path)
     return model

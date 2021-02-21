@@ -73,4 +73,4 @@ def model_alexnet():
         alexnet: AlexNet Architecture
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return alexnet.alex_net("alexnet_weights.h5")
+    return alexnet.alex_net()
