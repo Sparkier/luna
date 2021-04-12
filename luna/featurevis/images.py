@@ -36,18 +36,17 @@ def deprocess_image(img):
     """
     Takes the values of an image array and normalizes them to be in the
     standard 0-255 RGB range
-
     :param img: The generated image array
-
     :return: A rescaled version of the image
     """
     print('Deprocessing image')
-    # Normalize array between 0 and 1
-    img = (img - np.min(img)) / (np.max(img) - np.min(img))
+    img = ((img - img.mean()) / img.std()) + 1e-5
+    img *= 0.15
+    img += 0.5
+    img = np.clip(img, 0, 1)
 
-    # Convert to RGB array
     img *= 255
-    img = img.astype("uint8")
+    img = np.clip(img, 0, 255).astype("uint8")
     return img
 
 
@@ -57,9 +56,7 @@ def save_image(img, name=None):
     :param img: The generated image
     :param name: A possible name, if none given it is auto generated
     """
-    #if (tf.compat.v1.keras.backend.image_data_format() == "channels_first"):
-    #    img = tf.transpose(img, [1, 2, 0])
-    arr = keras.preprocessing.image.img_to_array(img)#, data_format="channels_last")
+    arr = keras.preprocessing.image.img_to_array(img)
     if name is None:
         name = datetime.now().isoformat()
         name = name.replace("-", "")

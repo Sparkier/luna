@@ -2,104 +2,14 @@
 The main file for the feature vis process
 """
 from __future__ import absolute_import, division, print_function
+import random
 import tensorflow as tf
 
 from tensorflow import keras
 from luna.featurevis import images as imgs
+from luna.featurevis import transformations as trans
 
-
-def add_noise(img, noise, pctg):
-    """Adds noise to the image to be manipulated.
-
-    Args:
-        img (list): the image data to which noise should be added
-        noise (boolean): whether noise should be added at all
-        pctg (number): how much noise should be added to the image
-        channels_first (bool, optional): whether the image is encoded channels
-        first. Defaults to False.
-
-    Returns:
-        list: the modified image
-    """
-    if noise:
-        if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-            img_noise = tf.random.uniform((1, 3, len(img[2]), len(img[3])),
-                                          dtype=tf.dtypes.float32)
-        else:
-            img_noise = tf.random.uniform((1, len(img[1]), len(img[2]), 3),
-                                          dtype=tf.dtypes.float32)
-        img_noise = (img_noise - 0.5) * 0.25 * ((100 - pctg) / 100)
-        img = img + img_noise
-        img = tf.clip_by_value(img, -1, 1)
-    return img
-
-
-def blur_image(img, blur, pctg):
-    """Gaussian blur the image to be modified.
-
-    Args:
-        img (list): the image to be blurred
-        blur (boolean): whether to blur the image
-        pctg (number): how much blur should be applied
-
-    Returns:
-        list: the blurred image
-    """
-    if blur:
-        img = gaussian_blur(img, sigma=0.001 + ((100-pctg) / 100) * 1)
-        img = tf.clip_by_value(img, -1, 1)
-    return img
-
-
-def rescale_image(img, scale, pctg):
-    """
-    Will rescale the current state of the image
-
-    :param img: the current state of the feature vis image
-    :param scale: true, if image should be randomly scaled
-    :param pctg: the amount of scaling in percentage
-    :return: the altered image
-    """
-    if scale:
-        scale_factor = tf.random.normal([1], 1, pctg)
-        img *= scale_factor[0]  # not working
-    return img
-
-
-# https://gist.github.com/blzq/c87d42f45a8c5a53f5b393e27b1f5319
-def gaussian_blur(img, kernel_size=3, sigma=5):
-    """
-    helper function for blurring the image, will soon be replaced by
-    tfa.image.gaussian_filter2d
-
-    :param img: the current state of the image
-    :param kernel_size: size of the convolution kernel used for blurring
-    :param sigma: gaussian blurring constant
-    :return: the altered image
-    """
-    def gauss_kernel(channels, kernel_size, sigma):
-        """
-        Calculates the gaussian convolution kernel for the blurring process
-
-        :param channels: amount of feature channels
-        :param kernel_size: size of the kernel
-        :param sigma: gaussian blurring constant
-        :return: the kernel for the given values
-        """
-        axis = tf.range(-kernel_size // 2 + 1.0, kernel_size // 2 + 1.0)
-        xvals, yvals = tf.meshgrid(axis, axis)
-        kernel = tf.exp(-(xvals ** 2 + yvals ** 2) / (2.0 * sigma ** 2))
-        kernel = kernel / tf.reduce_sum(kernel)
-        kernel = tf.tile(kernel[..., tf.newaxis], [1, 1, channels])
-        return kernel
-
-    gaussian_kernel = gauss_kernel(tf.shape(img)[-1], kernel_size, sigma)
-    gaussian_kernel = gaussian_kernel[..., tf.newaxis]
-
-    return tf.nn.depthwise_conv2d(img, gaussian_kernel, [1, 1, 1, 1],
-                                  padding='SAME', data_format='NHWC')
-
-
+#pylint: disable=R0914
 def visualize_filter(image, model, layer, filter_index, iterations,
                      learning_rate, noise, blur, scale):
     """Create a feature visualization for a filter in a layer of the model.
@@ -118,13 +28,34 @@ def visualize_filter(image, model, layer, filter_index, iterations,
     Returns:
         tuple: loss and result image for the process
     """
+    image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
+
+    # Temporary method for random choice of
+    # transformation combination
+    choice_num = [0, 1, 2, 3]
+    augmentation = ['noise', 'blur', 'scale']
     print('Starting Feature Vis Process')
     for iteration in range(iterations):
         pctg = int(iteration / iterations * 100)
-        image = add_noise(image, noise, pctg)
-        image = blur_image(image, blur, pctg)
-        image = rescale_image(image, scale, pctg)
+        image_aug = {'noise': trans.add_noise(image, noise, pctg),
+                     'blur': trans.blur_image(image, blur, pctg),
+                     'scale': trans.rescale_image(image, scale)}
+        num = random.choice(choice_num)
+        if num ==1:
+            ind = random.sample(augmentation, 1)
+            print(ind)
+            image = image_aug[ind[0]]
+        if num ==2:
+            ind = random.sample(augmentation, 2)
+            print(ind)
+            image = image_aug[ind[0]]
+            image = image_aug[ind[1]]
+        else:
+            image = trans.add_noise(image, noise, pctg)
+            image = trans.blur_image(image, blur, pctg)
+            image = trans.rescale_image(image, scale)
+
         loss, image = gradient_ascent_step(
             image, feature_extractor, filter_index, learning_rate)
         print('>>', pctg, '%', end="\r", flush=True)
@@ -151,9 +82,9 @@ def compute_loss(input_image, model, filter_index):
     activation = model(input_image)
     # We avoid border artifacts by only involving non-border pixels in the loss.
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        filter_activation = activation[:, filter_index, 2:-2, 2:-2]
+        filter_activation = activation[:, filter_index, :, :]
     else:
-        filter_activation = activation[:, 2:-2, 2:-2, filter_index]
+        filter_activation = activation[:, :, :, filter_index]
     return tf.reduce_mean(filter_activation)
 
 

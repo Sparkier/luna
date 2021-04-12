@@ -14,8 +14,6 @@ from keras.utils.data_utils import get_file
 from tensorflow.keras.layers import Conv2D
 
 
-
-
 def cross_channel_normalization(alpha=1e-4, k=2, beta=0.75, num=5, **kwargs):
     """
     This is the function used for cross channel normalization in the original
