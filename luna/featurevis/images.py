@@ -40,13 +40,19 @@ def deprocess_image(img):
     :return: A rescaled version of the image
     """
     print('Deprocessing image')
+    # compute the normal scores (z scores) and add little noise for uncertainty
     img = ((img - img.mean()) / img.std()) + 1e-5
+    # ensure that the variance is 0.15
     img *= 0.15
+    #croping the center adn clip the values between 0 and 1
+    img = img[25:-25, 25:-25, :]
     img += 0.5
     img = np.clip(img, 0, 1)
 
+    #convert to RGB
     img *= 255
     img = np.clip(img, 0, 255).astype("uint8")
+
     return img
 
 

@@ -1,5 +1,5 @@
 """
-Copyright [2017] [https://github.com/tensorflow/lucid]
+Adopted from [2017] [https://github.com/tensorflow/lucid]
 """
 
 from contextlib import contextmanager

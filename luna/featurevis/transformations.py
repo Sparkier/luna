@@ -3,63 +3,104 @@ The transformations for feature vis process
 """
 import random
 import tensorflow as tf
-import tensorflow_addons as tfa
 
 
-
-def add_noise(img, noise, pctg):
+def add_noise(img, noise):
     """Adds noise to the image to be manipulated.
     Args:
         img (list): the image data to which noise should be added
         noise (boolean): whether noise should be added at all
-        pctg (number): how much noise should be added to the image
-        channels_first (bool, optional): whether the image is encoded channels
-        first. Defaults to False.
     Returns:
         list: the modified image
     """
-    if noise:
+    if  noise:
         if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-            img_noise = tf.random.uniform((img.shape),
-                                          dtype=tf.dtypes.float32)
+            img_noise = tf.random.uniform((1, 3, img.shape[2], len(img[3])),
+                                            dtype=tf.dtypes.float32)
         else:
             img_noise = tf.random.uniform((img.shape),
-                                          dtype=tf.dtypes.float32)
-        img_noise = (img_noise - 0.5) * 0.25 * ((100 - pctg) / 100)
+                                            dtype=tf.dtypes.float32)
+        img_noise = (img_noise - 0.5) * 0.25 * random.random()
         img = img + img_noise
         img = tf.clip_by_value(img, -1, 1)
     return img
 
 
-def blur_image(img, blur, pctg):
+def blur_image(img, blur):
     """Gaussian blur the image to be modified.
 
     Args:
         img (list): the image to be blurred
         blur (boolean): whether to blur the image
-        pctg (number): how much blur should be applied
-
     Returns:
         list: the blurred image
     """
     if blur:
-        img = gaussian_blur(img, sigma=0.001 + ((100-pctg) / 100) * 1)
+        img = gaussian_blur(img, sigma=0.001 + random.random())
         img = tf.clip_by_value(img, -1, 1)
     return img
 
 
 def rescale_image(img, scale):
-    """
-    Will rescale the current state of the image
-    :param img: the current state of the feature vis image
-    :param scale: true, if image should be randomly scaled
-    :param pctg: the amount of scaling in percentage
-    :return: the altered image
+    """Rescales the image.
+
+    Args:
+       img (list) the current state of the feature vis image
+       scale (bool) true, if image should be randomly scaled
+    Returns:
+        list: the rescaled image
     """
     if scale:
+        # factors are selected based on the optimized factors reported by lucid
+        # https://distill.pub/2017/feature-visualization/
         scale_factor = [1, 0.975, 1.025, 0.95, 1.05]
         factor = random.choice(scale_factor)
         img = img * factor
+    return img
+
+
+def crop_or_pad(image, trans):
+    """Randomly crop or pad the image
+
+    Args:
+        image (list): Image
+        trans (bool): True if image needs to crop or pad
+
+    Returns:
+        list: the cropped/padded image
+    """
+    if trans:
+        trans_size= random.randint(-6, 6)
+        image = tf.image.resize_with_crop_or_pad(
+            image, image.shape[1]-trans_size, image.shape[2]-trans_size)
+    return image
+
+
+def vert_rotation(img, rotation):
+    """Randomly rotates the image
+
+    Args:
+        img (list): image
+        rotation (bool): True if image needs to rotate
+
+    Returns:
+        img (list): rotated image
+    """
+    if rotation:
+        img = tf.image.rot90(img)
+    return img
+
+
+def random_flip(img, flip):
+    """fliping the image up, down, left, right
+
+    Args:
+        img (list): image
+        flip (bool): True if image needs to flip
+    """
+    if flip:
+        img = tf.image.random_flip_left_right(img)
+        img = tf.image.random_flip_up_down(img)
     return img
 
 
@@ -96,57 +137,19 @@ def gaussian_blur(img, kernel_size=3, sigma=5):
     return tf.nn.depthwise_conv2d(img, gaussian_kernel, [1, 1, 1, 1],
                                   padding='SAME', data_format='NHWC')
 
-def jitter(image, jitter_size, seed=None):
-    """Jitters the image
+
+def color_augmentation(image, color_aug):
+    """Augmentaing the color
 
     Args:
-        image (array): the image
-        d (int): shape of cropping
-        seed (int, optional): Seed. Defaults to None.
+        image (list): Image
+        color_aug (bool): True if image needs to augment
 
     Returns:
-        array: Jittered image
+        img (list): Augmented image
     """
-    image = tf.convert_to_tensor(value=image, dtype_hint=tf.float32)
-    t_shp = tf.shape(input=image)
-    crop_shape = tf.concat([t_shp[:-3], t_shp[-3:-1] - jitter_size, t_shp[-1:]], 0)
-    crop = tf.image.random_crop(image, crop_shape, seed=seed)
-    shp = image.get_shape().as_list()
-    mid_shp_changed = [
-        shp[-3] - jitter_size if shp[-3] is not None else None,
-        shp[-2] - jitter_size if shp[-3] is not None else None,
-    ]
-    crop.set_shape(shp[:-3] + mid_shp_changed + shp[-1:])
-    return crop
-
-#pylint: disable=E1123
-def pad(img, pad_size, pad_mode="REFLECT", constant_value=0.5):
-    """Pads the image
-
-    Args:
-        img (list): the image
-        w (int): dimension of padding
-        mode (str, optional): Defaults to "REFLECT".
-        constant_value (float, optional): Defaults to 0.5.
-
-    Returns:
-        [type]: [description]
-    """
-    if constant_value == "uniform":
-        constant_value_ = tf.random.uniform([], 0, 1)
-    else:
-        constant_value_ = constant_value
-    return tf.pad(img, paddings=[(0, 0), (pad_size, pad_size), (pad_size, pad_size),
-                                (0, 0)], mode=pad_mode, constant_values=constant_value_)
-
-def random_rotate(img, rotation):
-    """Randomly rotates the image
-
-    Args:
-        img (list): image
-        rotation (int): degree of rotation
-
-    Returns:
-        img (list): rotated image
-    """
-    return tfa.image.rotate(img, rotation)
+    if color_aug:
+        image = tf.image.random_saturation(image, 0, 0.5)
+        image = tf.image.random_contrast(image, 0, 0.8)
+        image = tf.image.random_brightness(image, 0.01)
+    return image

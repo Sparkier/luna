@@ -7,7 +7,6 @@ from tensorflow import keras
 from tf_slim import nets as slim_nets
 
 from luna.pretrained_models import googlenet
-from luna.pretrained_models import alexnet
 
 
 def model_resnet50v2():
@@ -29,7 +28,8 @@ def model_inceptionv3():
         keras.application: InceptionV3 Architecture
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return keras.applications.InceptionV3(weights="imagenet", include_top=False)
+    return keras.applications.InceptionV3(
+        weights="imagenet", include_top=False)
 
 
 def model_inceptionv1():
@@ -65,12 +65,12 @@ def model_vgg16():
     return keras.applications.VGG16(weights="imagenet", include_top=False)
 
 
-def model_alexnet():
+def model_vgg19():
     """
-    Instantiates vgg16 architecture using alexnet
+    Instantiates vgg19 architecture using keras
 
     Returns:
-        alexnet: AlexNet Architecture
+        keras.applications: vgg19 Architecture
     """
     tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return alexnet.alex_net()
+    return keras.applications.VGG19(weights="imagenet", include_top=False)

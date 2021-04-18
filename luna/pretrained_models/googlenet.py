@@ -431,13 +431,12 @@ def create_googlenet(user_weight_path = None):
                                              loss2_classifier_act,
                                              loss3_classifier_act])
 
-    weights_path = Path(str(Path.home()) + r"\.keras\datasets\googlenet_weights.h5")
 
-    if Path.is_file(weights_path):
-        googlenet.load_weights(weights_path)
-    elif user_weight_path:
+    if user_weight_path:
+        print("Model loaded")
         googlenet.load_weights(user_weight_path)
     else:
+        print("No model directory given. Downloading Model...")
         weights_path = get_file(
             'googlenet_weights.h5',
             'https://github.com/pinae/GoogLeNet-Keras-Test/raw/master/googlenet_weights.h5')
