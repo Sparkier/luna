@@ -4,6 +4,7 @@ https://gist.github.com/joelouismarino/a2ede9ab3928f999575423b9887abd14
 """
 # pylint: skip-file
 import os
+from pathlib import Path
 from keras import backend as K
 from keras.utils.conv_utils import convert_kernel
 import tensorflow as tf
@@ -13,7 +14,7 @@ from keras.models import Model
 from keras.layers import Layer, Input, Dense, Conv2D, MaxPooling2D
 from keras.layers import AveragePooling2D, ZeroPadding2D, Dropout, Flatten
 from keras.layers import Concatenate, Activation
-
+from keras.utils.data_utils import get_file
 
 class PoolHelper(Layer):
     """Helper class for the googlenet creation."""
@@ -70,7 +71,7 @@ class LRN(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-def create_googlenet():
+def create_googlenet(user_weight_path = None):
     # creates GoogLeNet a.k.a. Inception v1 (Szegedy, 2015)
     input = Input(shape=(3, 224, 224))
 
@@ -430,8 +431,16 @@ def create_googlenet():
                                              loss2_classifier_act,
                                              loss3_classifier_act])
 
-    googlenet.load_weights(os.path.join(
-        os.path.dirname(__file__), 'googlenet_weights.h5'))
+
+    if user_weight_path:
+        print("Model loaded")
+        googlenet.load_weights(user_weight_path)
+    else:
+        print("No model directory given. Downloading Model...")
+        weights_path = get_file(
+            'googlenet_weights.h5',
+            'https://github.com/pinae/GoogLeNet-Keras-Test/raw/master/googlenet_weights.h5')
+        googlenet.load_weights(weights_path)
 
     if keras.backend.backend() == 'tensorflow':
         # convert the convolutional kernels for tensorflow
