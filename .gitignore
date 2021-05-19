@@ -180,10 +180,11 @@ dmypy.json
 report.txt
 
 #output/input files
-.png
-.npy
+*.png
+*.npy
 /output
-
+main.py
+main2.py
 
 ### VisualStudioCode ###
 .vscode/*

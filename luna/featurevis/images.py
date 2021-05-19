@@ -70,3 +70,138 @@ def save_image(img, name=None):
         name = name.replace("+", "")
         name = name.replace(".", "")
     np.save("{0}.npy".format(name), arr)
+
+
+def initialize_image_ref(width, height, std = None, fft = True,
+                        decorrelate=True, channels=None):
+    """
+    Creates an initial randomized image to start feature vis process.
+    This could be subject to optimization in the future.
+
+    :param width: The width of the image
+    :param height: The height of the image
+    :param sd: standard deviation for noise initialization
+    :param fft: Image parameterization with fast fourier transformation
+    :param deccorelate: the color interpretation of the image tensor's color
+    :param channels: True for gray images
+
+    :return: A randomly generated image
+    """
+    print('initializing image')
+    # We start from a gray image with some random noise
+    if tf.compat.v1.keras.backend.image_data_format() == 'channels_first':
+        img = tf.random.uniform((1, 3, width, height), dtype=tf.dtypes.float32)
+        shape = [img.shape[0], img.shape[1], img.shape[2], img.shape[3]]
+    else:
+        img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
+        shape = [img.shape[0], img.shape[3], img.shape[1], img.shape[2]]  # [batch, ch, h, w]
+
+    if fft:
+        image_f = fft_image(shape, std=std)
+    else:
+        image_f = np.random.normal(size=shape, scale=std).astype(np.float32)
+
+    if channels:
+        output = tf.nn.sigmoid(image_f)
+    else:
+        output = to_valid_rgb(image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
+
+    return output
+
+
+def fft_image(shape, std=None, decay_power=1):
+    """Image parameterization using 2D Fourier coefficients.
+
+    Args:
+        shape : Image shape
+        sd : standard deviation as noise.
+        decay_power : Defaults to 1.
+
+    Returns:
+        image_t: new image in spatial domain
+    """
+    batch, channels, height, width = shape
+    # real valued fft
+    freqs = rfft2d_freqs(height, width)
+
+    init_val_size = (2, batch, channels) + freqs.shape
+    std = std or 0.01
+    init_val = np.random.normal(size=init_val_size, scale=std).astype(np.float32)
+    spectrum_real_imag_t = tf.Variable(init_val)
+
+    scale = 1.0 / np.maximum(freqs, 1.0 / max(width, height)) ** decay_power
+    scale *= np.sqrt(width * height)
+    spectrum_t = tf.complex(spectrum_real_imag_t[0], spectrum_real_imag_t[1])
+    scaled_spectrum_t = scale * spectrum_t
+
+    # convert the spectrum to spatial domain
+    image_t = tf.transpose(tf.signal.irfft2d(scaled_spectrum_t), (0, 2, 3, 1))
+    image_t = image_t[:batch, :height, :width, :channels]
+    image_t = image_t / 4.0
+    return image_t
+
+
+def rfft2d_freqs(height, width):
+    """computation of 2D frequencies of spectrum
+
+    Args:
+        h : image height
+        w : image width
+
+    Returns:
+        spectrum frequency : 2D spectrum frequencies.
+    """
+    freq_y = np.fft.fftfreq(height)[:, None]
+    # when we have an odd input dimension we need to keep one additional
+    # frequency and later cut off 1 pixel
+    if width % 2 == 1:
+        freq_x = np.fft.fftfreq(width)[: width // 2 + 2]
+    else:
+        freq_x = np.fft.fftfreq(width)[: width // 2 + 1]
+    return np.sqrt(freq_x * freq_x + freq_y * freq_y)
+
+
+color_correlation_svd_sqrt = np.asarray([[0.26, 0.09, 0.02],
+                                         [0.27, 0.00, -0.05],
+                                         [0.27, -0.09, 0.03]]).astype("float32")
+
+max_norm_svd_sqrt = np.max(np.linalg.norm(color_correlation_svd_sqrt, axis=0))
+
+color_mean = [0.48, 0.46, 0.41]
+
+
+def _linear_decorrelate_color(image):
+    """Color correlation matrix
+
+    Args:
+        t : Input tensor
+
+    Returns:
+        t : the decorrolated version of the color space of the input tensor
+    """
+    t_flat = tf.reshape(image, [-1, 3])
+    color_correlation_normalized = color_correlation_svd_sqrt / max_norm_svd_sqrt
+    t_flat = tf.matmul(t_flat, color_correlation_normalized.T)
+    image = tf.reshape(t_flat, tf.shape(image))
+    return image
+
+def to_valid_rgb(image, decorrelate=False, sigmoid=True):
+    """Transformation of input tensor to valid rgb colors
+
+    Args:
+        t : Input tensor
+        decorrelate (bool): Color interpretation from whitened space if it is True.
+        sigmoid (bool): Color constrained if it is True.
+
+    Returns:
+        t : Transfomed input tensor with the innermost dimension
+    """
+    if decorrelate:
+        image = _linear_decorrelate_color(image)
+    if decorrelate and not sigmoid:
+        image += color_mean
+    if sigmoid:
+        image =  tf.nn.sigmoid(image)
+    else:
+        image = (2*image-1 / tf.maximum(1.0, tf.abs(2*image-1)))/2 + 0.5
+    return image
