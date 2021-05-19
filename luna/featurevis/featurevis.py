@@ -73,7 +73,7 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
 
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
-    
+
     if image.shape[1] < 299 or image.shape[2] <299:
         image = tf.image.resize(image, [299, 299])
     # Decode the resulting input image
