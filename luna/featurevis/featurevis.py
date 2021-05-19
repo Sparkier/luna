@@ -4,12 +4,9 @@ The main file for the feature vis process
 from __future__ import absolute_import, division, print_function
 import tensorflow as tf
 from tensorflow import keras
-
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
-
-
 # pylint: disable=too-few-public-methods
 class OptimizationParameters():
     """object for generalizing optimization parameters
@@ -57,6 +54,7 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
     Returns:
         tuple: loss and result image for the process
     """
+    image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
 
     # Temporary method for random choice of
@@ -75,7 +73,7 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
 
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
-
+    
     if image.shape[1] < 299 or image.shape[2] <299:
         image = tf.image.resize(image, [299, 299])
     # Decode the resulting input image
