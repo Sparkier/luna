@@ -7,6 +7,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
+COLOR_CORRELATION_SVD_SQRT = np.asarray([[0.26, 0.09, 0.02],
+                                         [0.27, 0.00, -0.05],
+                                         [0.27, -0.09, 0.03]]).astype("float32")
+
+MAX_NORM_SVD_SQRT = np.max(np.linalg.norm(COLOR_CORRELATION_SVD_SQRT, axis=0))
+
+COLOR_MEAN = [0.48, 0.46, 0.41]
 
 def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
     """
@@ -161,15 +168,6 @@ def rfft2d_freqs(height, width):
     return np.sqrt(freq_x * freq_x + freq_y * freq_y)
 
 
-color_correlation_svd_sqrt = np.asarray([[0.26, 0.09, 0.02],
-                                         [0.27, 0.00, -0.05],
-                                         [0.27, -0.09, 0.03]]).astype("float32")
-
-max_norm_svd_sqrt = np.max(np.linalg.norm(color_correlation_svd_sqrt, axis=0))
-
-color_mean = [0.48, 0.46, 0.41]
-
-
 def _linear_decorrelate_color(image):
     """Color correlation matrix
 
@@ -180,7 +178,7 @@ def _linear_decorrelate_color(image):
         t : the decorrolated version of the color space of the input tensor
     """
     t_flat = tf.reshape(image, [-1, 3])
-    color_correlation_normalized = color_correlation_svd_sqrt / max_norm_svd_sqrt
+    color_correlation_normalized = COLOR_CORRELATION_SVD_SQRT / MAX_NORM_SVD_SQRT
     t_flat = tf.matmul(t_flat, color_correlation_normalized.T)
     image = tf.reshape(t_flat, tf.shape(image))
     return image
@@ -199,7 +197,7 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
     if decorrelate:
         image = _linear_decorrelate_color(image)
     if decorrelate and not sigmoid:
-        image += color_mean
+        image += COLOR_MEAN
     if sigmoid:
         image =  tf.nn.sigmoid(image)
     else:
