@@ -1,0 +1,7 @@
+include *.md
+recursive-include build *.py
+recursive-include dist *.gz
+recursive-include dist *.whl
+recursive-include src *.md
+recursive-include src *.pylintrc
+recursive-include src *.toml

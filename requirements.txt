@@ -1,3 +1,0 @@
-.
-tensorflow_addons
-pylint
