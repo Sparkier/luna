@@ -17,8 +17,11 @@ from luna.featurevis import featurevis, images, image_reader
 model = models.get_model("inceptionV3")
 # model.summary()
 image = images.initialize_image(224, 224)
-loss, image = featurevis.visualize_filter(image, model, "mixed6", 10, 200, 1, 0, 0, 0)
-print(loss)
+opt_param = featurevis.OptimizationParameters(iterations=2000, learning_rate=0.7)
+aug_param = featurevis.AugmentationParameters(blur= False, scale= True, pad_crop=True, flip=False,
+                                                    rotation=False, noise=False, color_aug=False)
+loss, image = featurevis.visualize_filter(image, model, layer_name,
+                                            channel_num, opt_param, aug_param)
 images.save_image(image, name="test")
 image_reader.save_npy_as_png("test.npy")
 ```
