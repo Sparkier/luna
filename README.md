@@ -15,6 +15,9 @@ from luna.pretrained_models import models
 from luna.featurevis import featurevis, images, image_reader
 
 
+model = models.model_inceptionv3()
+image = images.initialize_image(224, 224)
+
 iterations = 10
 learning_rate = 200
 
@@ -27,8 +30,6 @@ noise = False
 color_aug = True
 
 
-model = models.model_inceptionv3()
-image = images.initialize_image(224, 224)
 
 opt_param = featurevis.OptimizationParameters(iterations, learning_rate)
 aug_param = featurevis.AugmentationParameters(blur, scale, pad_crop, flip, rotation, noise, color_aug)
