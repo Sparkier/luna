@@ -14,7 +14,7 @@ class OptimizationParameters():
     """object for generalizing optimization parameters
 
     Args:
-        iterations (number): hoe many iterations to optimize for
+        iterations (number): how many iterations to optimize for
         learning_rate (number): update amount after each iteration
     """
     def __init__(self, iterations, learning_rate):
