@@ -1,6 +1,5 @@
 """
-The utility functions for creating and processing the images
-for the feature visualisation process
+The utility functions for creating and processing the images for the feature visualisation process.
 """
 from datetime import datetime
 import numpy as np
@@ -21,10 +20,12 @@ def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
     Creates an initial randomized image to start feature vis process.
     This could be subject to optimization in the future.
 
-    :param width: The width of the image
-    :param height: The height of the image
+    Args:
+        width (int): The width of the image.
+        height (int): The height of the image.
 
-    :return: A randomly generated image
+    Returns:
+        A randomly generated image.
     """
     print('initializing image')
     # We start from a gray image with some random noise
@@ -43,9 +44,12 @@ def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
 def deprocess_image(img):
     """
     Takes the values of an image array and normalizes them to be in the
-    standard 0-255 RGB range
-    :param img: The generated image array
-    :return: A rescaled version of the image
+    standard 0-255 RGB range.
+
+    Args:
+        img (List[float]): The generated image array.
+    Returns:
+        A rescaled version of the image.
     """
     print('Deprocessing image')
     # compute the normal scores (z scores) and add little noise for uncertainty
@@ -66,9 +70,11 @@ def deprocess_image(img):
 
 def save_image(img, name=None):
     """
-    Saves a generated image array as a numpy array in a file
-    :param img: The generated image
-    :param name: A possible name, if none given it is auto generated
+    Saves a generated image array as a numpy array in a file.
+
+    Args:
+        img (pil.Image): The generated image.
+        name (str): A possible name, if none given it is auto generated.
     """
     arr = keras.preprocessing.image.img_to_array(img)
     if name is None:
@@ -86,14 +92,16 @@ def initialize_image_ref(width, height, std=None, fft=True,
     Creates an initial randomized image to start feature vis process.
     This could be subject to optimization in the future.
 
-    :param width: The width of the image
-    :param height: The height of the image
-    :param sd: standard deviation for noise initialization
-    :param fft: Image parameterization with fast fourier transformation
-    :param deccorelate: the color interpretation of the image tensor's color
-    :param channels: True for gray images
+    Args:
+        width (int): The width of the image.
+        height (int): The height of the image.
+        sd (float): standard deviation for noise initialization.
+        fft (boolean): Image parameterization with fast fourier transformation.
+        deccorelate (boolean): the color interpretation of the image tensor's color.
+        channels (boolean): True for gray images.
 
-    :return: A randomly generated image
+    Returns:
+        A randomly generated image.
     """
     print('initializing image')
     # We start from a gray image with some random noise
@@ -123,12 +131,12 @@ def fft_image(shape, std=None, decay_power=1):
     """Image parameterization using 2D Fourier coefficients.
 
     Args:
-        shape : Image shape
-        sd : standard deviation as noise.
-        decay_power : Defaults to 1.
+        shape (list[int]): Image shape.
+        sd (float): standard deviation as noise.
+        decay_power (int): Defaults to 1.
 
     Returns:
-        image_t: new image in spatial domain
+        New image in spatial domain.
     """
     batch, channels, height, width = shape
     # real valued fft
@@ -153,11 +161,11 @@ def fft_image(shape, std=None, decay_power=1):
 
 
 def rfft2d_freqs(height, width):
-    """computation of 2D frequencies of spectrum
+    """computation of 2D frequencies of spectrum.
 
     Args:
-        h : image height
-        w : image width
+        h (int): image height.
+        w (int): image width.
 
     Returns:
         spectrum frequency : 2D spectrum frequencies.
@@ -173,13 +181,13 @@ def rfft2d_freqs(height, width):
 
 
 def _linear_decorrelate_color(image):
-    """Color correlation matrix
+    """Color correlation matrix.
 
     Args:
-        t : Input tensor
+        image (tf.Tensor): Input image.
 
     Returns:
-        t : the decorrolated version of the color space of the input tensor
+        The decorrolated version of the color space of the input image.
     """
     t_flat = tf.reshape(image, [-1, 3])
     color_correlation_normalized = COLOR_CORRELATION_SVD_SQRT / MAX_NORM_SVD_SQRT
@@ -189,15 +197,15 @@ def _linear_decorrelate_color(image):
 
 
 def to_valid_rgb(image, decorrelate=False, sigmoid=True):
-    """Transformation of input tensor to valid rgb colors
+    """Transformation of input tensor to valid rgb colors.
 
     Args:
-        t : Input tensor
+        image (tf.Tensor): Input image.
         decorrelate (bool): Color interpretation from whitened space if it is True.
         sigmoid (bool): Color constrained if it is True.
 
     Returns:
-        t : Transfomed input tensor with the innermost dimension
+        Transfomed image with the innermost dimension.
     """
     if decorrelate:
         image = _linear_decorrelate_color(image)

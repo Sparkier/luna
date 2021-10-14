@@ -11,8 +11,9 @@ import tensorflow as tf
 
 def save_npy_as_png(input_path, output_path):
     """Saves a numpy image as a png given an image path.
+
     Args:
-        path (string): the path to the numpy file containing the image data
+        path (string): the path to the numpy file containing the image data.
     """
     filepath = Path(input_path)
     filename = filepath.stem

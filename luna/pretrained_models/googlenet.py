@@ -3,18 +3,17 @@ A Keras Implementation of the GoogleNet (InceptionV1) from
 https://gist.github.com/joelouismarino/a2ede9ab3928f999575423b9887abd14
 """
 # pylint: skip-file
-import os
-from pathlib import Path
-from keras import backend as K
-from keras.utils.conv_utils import convert_kernel
 import tensorflow as tf
-import keras
-from keras.regularizers import l2
-from keras.models import Model
-from keras.layers import Layer, Input, Dense, Conv2D, MaxPooling2D
-from keras.layers import AveragePooling2D, ZeroPadding2D, Dropout, Flatten
-from keras.layers import Concatenate, Activation
-from keras.utils.data_utils import get_file
+from tensorflow.keras import backend as K
+from tensorflow import keras
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Input, Dense, Conv2D, MaxPooling2D
+from tensorflow.keras.layers import AveragePooling2D, ZeroPadding2D, Dropout, Flatten
+from tensorflow.keras.layers import Concatenate, Activation
+from tensorflow.python.keras.utils.data_utils import get_file
+from tensorflow.python.keras.utils.conv_utils import convert_kernel
+
 
 class PoolHelper(Layer):
     """Helper class for the googlenet creation."""
@@ -71,7 +70,7 @@ class LRN(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-def create_googlenet(user_weight_path = None):
+def create_googlenet(user_weight_path=None):
     # creates GoogLeNet a.k.a. Inception v1 (Szegedy, 2015)
     input = Input(shape=(3, 224, 224))
 
@@ -430,7 +429,6 @@ def create_googlenet(user_weight_path = None):
     googlenet = Model(inputs=input, outputs=[loss1_classifier_act,
                                              loss2_classifier_act,
                                              loss3_classifier_act])
-
 
     if user_weight_path:
         print("Model loaded")
