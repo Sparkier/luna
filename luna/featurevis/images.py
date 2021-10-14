@@ -15,6 +15,7 @@ MAX_NORM_SVD_SQRT = np.max(np.linalg.norm(COLOR_CORRELATION_SVD_SQRT, axis=0))
 
 COLOR_MEAN = [0.48, 0.46, 0.41]
 
+
 def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
     """
     Creates an initial randomized image to start feature vis process.
@@ -51,12 +52,12 @@ def deprocess_image(img):
     img = ((img - img.mean()) / img.std()) + 1e-5
     # ensure that the variance is 0.15
     img *= 0.15
-    #croping the center adn clip the values between 0 and 1
+    # croping the center adn clip the values between 0 and 1
     img = img[25:-25, 25:-25, :]
     img += 0.5
     img = np.clip(img, 0, 1)
 
-    #convert to RGB
+    # convert to RGB
     img *= 255
     img = np.clip(img, 0, 255).astype("uint8")
 
@@ -76,11 +77,11 @@ def save_image(img, name=None):
         name = name.replace(":", "")
         name = name.replace("+", "")
         name = name.replace(".", "")
-    np.save("{0}.npy".format(name), arr)
+    np.save(f"{name}.npy", arr)
 
 
-def initialize_image_ref(width, height, std = None, fft = True,
-                        decorrelate=True, channels=None):
+def initialize_image_ref(width, height, std=None, fft=True,
+                         decorrelate=True, channels=None):
     """
     Creates an initial randomized image to start feature vis process.
     This could be subject to optimization in the future.
@@ -101,7 +102,8 @@ def initialize_image_ref(width, height, std = None, fft = True,
         shape = [img.shape[0], img.shape[1], img.shape[2], img.shape[3]]
     else:
         img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
-        shape = [img.shape[0], img.shape[3], img.shape[1], img.shape[2]]  # [batch, ch, h, w]
+        shape = [img.shape[0], img.shape[3], img.shape[1],
+                 img.shape[2]]  # [batch, ch, h, w]
 
     if fft:
         image_f = fft_image(shape, std=std)
@@ -111,7 +113,8 @@ def initialize_image_ref(width, height, std = None, fft = True,
     if channels:
         output = tf.nn.sigmoid(image_f)
     else:
-        output = to_valid_rgb(image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
+        output = to_valid_rgb(
+            image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
 
     return output
 
@@ -133,7 +136,8 @@ def fft_image(shape, std=None, decay_power=1):
 
     init_val_size = (2, batch, channels) + freqs.shape
     std = std or 0.01
-    init_val = np.random.normal(size=init_val_size, scale=std).astype(np.float32)
+    init_val = np.random.normal(
+        size=init_val_size, scale=std).astype(np.float32)
     spectrum_real_imag_t = tf.Variable(init_val)
 
     scale = 1.0 / np.maximum(freqs, 1.0 / max(width, height)) ** decay_power
@@ -183,6 +187,7 @@ def _linear_decorrelate_color(image):
     image = tf.reshape(t_flat, tf.shape(image))
     return image
 
+
 def to_valid_rgb(image, decorrelate=False, sigmoid=True):
     """Transformation of input tensor to valid rgb colors
 
@@ -199,7 +204,7 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
     if decorrelate and not sigmoid:
         image += COLOR_MEAN
     if sigmoid:
-        image =  tf.nn.sigmoid(image)
+        image = tf.nn.sigmoid(image)
     else:
         image = (2*image-1 / tf.maximum(1.0, tf.abs(2*image-1)))/2 + 0.5
     return image
