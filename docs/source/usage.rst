@@ -10,21 +10,21 @@ The following provides an example of how Luna can be used for feature visualizat
     model = models.model_inceptionv3()
     image = images.initialize_image(224, 224)
     
-    iterations = 10
-    learning_rate = 200
+    iterations = 2500
+    learning_rate = 0.7
     
-    blur = False
-    scale = False
-    pad_crop = True
+    blur = True
+    scale = True
+    pad_crop = False
     flip = False
-    rotation = True
+    rotation = False
     noise = False
-    color_aug = True
+    color_aug = False
     
     opt_param = featurevis.OptimizationParameters(iterations, learning_rate)
     aug_param = featurevis.AugmentationParameters(blur, scale, pad_crop, flip, rotation, noise, color_aug)
     
-    loss, image = featurevis.visualize_filter(image, model, "mixed6", 10, opt_param, aug_param)
+    loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param, aug_param)
     images.save_image(image, name="test")
     image_reader.save_npy_as_png("test.npy", ".")
 
