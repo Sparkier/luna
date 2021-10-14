@@ -1,9 +1,9 @@
 # Luna
 
-Inspired by [Lucid](https://github.com/tensorflow/lucid), Luna is a Feature Visualization package for Tensorflow.
-While Lucid is not supporting Tensorflow 2, and thus misses out on many modern features and the ability to use modern models, Luna was built with Tensorflow 2 at its core.
+Inspired by [Lucid](https://github.com/tensorflow/lucid), **Luna** is a Feature Visualization package for Tensorflow.
+While Lucid does not support Tensorflow 2, **Luna** was built with Tensorflow 2 at its core.
 
-**Luna is under active development. It is not production-ready research code and misses many features of Lucid.**
+**Luna is under active development. It is research code and not production-ready.**
 
 ## Usage
 
@@ -39,6 +39,11 @@ print(loss)
 images.save_image(image, name="test")
 image_reader.save_npy_as_png("test.npy", ".")
 ```
+
+## Contributing
+
+We greatly appreciate any effort to improve **Luna**.
+If you want to contribute to its development, see our [contribution guidelines](./CONTRIBUTING.md).
 
 ## Recomended Reading
 
