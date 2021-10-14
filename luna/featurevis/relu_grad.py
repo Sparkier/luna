@@ -90,9 +90,12 @@ def redirected_relu6_grad(operation, grad):
 def register_to_random_name(grad_f):
     """Register a gradient function to a random string.
     In order to use a custom gradient in TensorFlow, it must be registered to a string.
-    This is both a hassle, and -- because only one function can every be registered to a string -- annoying to iterate on in an interactive environemnt.
-    This function registers a function to a unique random string of the form: {FUNCTION_NAME}_{RANDOM_SALT}
-    And then returns the random string. This is a helper in creating more convenient gradient overrides.
+    This is both a hassle, and -- because only one function can every be registered to a
+    string -- annoying to iterate on in an interactive environemnt.
+    This function registers a function to a unique random string of the form:
+    {FUNCTION_NAME}_{RANDOM_SALT}
+    and then returns the random string. This is a helper in creating more convenient
+    gradient overrides.
 
     Args:
         grad_f: gradient function to register. Should map (op, grad) -> grad(s)

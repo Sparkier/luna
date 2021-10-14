@@ -3,3 +3,4 @@ tensorflow_addons
 pylint
 sphinx
 furo
+m2r2

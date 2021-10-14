@@ -57,7 +57,8 @@ html_static_path = ['_static']
 extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'm2r2'
 ]
 autosummary_generate = True
 
