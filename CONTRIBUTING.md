@@ -13,3 +13,8 @@ Please make sure your changes pass our tests (they will be run automatically for
 ### Docs
 
 To also deploy the documentation if something has changed there, use the [update script](./pages-publish.sh).
+
+### Open Issues
+
+For contribution opportunities, see our [Issues](https://github.com/Sparkier/luna/issues).
+To get started, look for ones with the tag **good first issue**.
