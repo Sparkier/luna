@@ -445,7 +445,7 @@ def create_googlenet(user_weight_path=None):
         for layer in googlenet.layers:
             if layer.__class__.__name__ == 'Conv2D':
                 original_w = tf.compat.v1.keras.backend.get_value(layer.kernel)
-                converted_w = convert_kernel(original_w)
+                converted_w = conv_utils(original_w)
                 tf.compat.v1.assign(layer.kernel, converted_w)
 
     return googlenet
