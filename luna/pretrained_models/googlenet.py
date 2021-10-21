@@ -11,8 +11,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Layer, Input, Dense, Conv2D, MaxPooling2D
 from tensorflow.keras.layers import AveragePooling2D, ZeroPadding2D, Dropout, Flatten
 from tensorflow.keras.layers import Concatenate, Activation
+from tensorflow.python.keras.utils import conv_utils
 from tensorflow.python.keras.utils.data_utils import get_file
-from tensorflow.python.keras.utils.conv_utils import convert_kernel
 
 
 class PoolHelper(Layer):
@@ -445,7 +445,7 @@ def create_googlenet(user_weight_path=None):
         for layer in googlenet.layers:
             if layer.__class__.__name__ == 'Conv2D':
                 original_w = tf.compat.v1.keras.backend.get_value(layer.kernel)
-                converted_w = convert_kernel(original_w)
+                converted_w = conv_utils(original_w)
                 tf.compat.v1.assign(layer.kernel, converted_w)
 
     return googlenet
