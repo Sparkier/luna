@@ -1,7 +1,14 @@
 language: python
-python: '3.8'
-
+python: "3.8"
 install:
   - pip install -r requirements.txt
 scripts:
   - pylint luna
+deploy:
+  provider: pypi
+  username: "__token__"
+  password:
+    secure: qw3pIHSqqfxgsCer/ufOn0u7X/vVznNiFJUq++SwJzBdUu+LtjhxscvBLVZ2GoaKC3k/qrwdXUZCzcAIAWlQlgbD8d+OCXla+0AyIKjpZUkPGZdjPQW8RGQlTatM1jKJRt4DtpSJqoBJi/Qx30Cjea+idRcqnmZtIV+BHC8VgkFqmxX34D9T4pJvR/SmeJXMf+8yKaQvwXcdiSVuHbUtBXNs/3jz/RiO4nMJfRbqGlrGfZeQUCSaLYueN0HQ+K1UODtX3tlX2LiaZldUA9w5E2vlEa/ijqyZdfXsI+MRRGSAVeogARvinkzoWWuNaOHGfH6nH1St2m3+a78twFcGBBlmcx8MDU0j2PzpCZx7RQXUFXCpOb79y5ibp2OrT5Fo5b7gtdcmx4baXzxVpHPWYNiSM4S6YfwSm3bNcJveoLYRIqzBeY1CVmrPNC1lh//6ThqpXsGk7rkh4ZOCTtdkdkMPiEr2fe53ZazVkgjykGd+qzJlmAAa/VhJ+UEBRiskGc6wIF+quoKrq6Jt7uoeEL03szwmPT9iJxcEU7eCoa6od1/nVBq/xYq2kwrhcnWumXYLAvexsAC0K8S25UhJMQxj+ylR89cZk4OAY3etnzFURb7JjQHKiZyn0H88/tFfCzikggB4jVFreMhrDudMIUCG6UJPdVP1PJm+dtNwmsk=
+  on:
+    tags: true
+    branch: master

@@ -4,3 +4,5 @@ pylint
 sphinx
 furo
 m2r2
+build
+twine
