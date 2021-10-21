@@ -4,7 +4,7 @@ if [[ $STATUS == *"nothing to commit, working tree clean"* ]]
 then
     make -C ./docs html
     git push origin --delete gh-pages
-    sed -i "" '/build/d' ./.gitignore
+    grep -v "build" ./.gitignore > tmpfile && mv tmpfile ./.gitignore
     cp docs/.nojekyll docs/build/html
     git add .
     git commit -m "autodeploy docs"
