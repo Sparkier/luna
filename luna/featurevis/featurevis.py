@@ -61,7 +61,7 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
 
 
     Returns:
-        tuple: loss and result image for the process.
+        tuple: activation and result image for the process.
     """
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
@@ -77,7 +77,7 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
         image = trans.random_flip(image, aug_param.flip)
         image = trans.vert_rotation(image, aug_param.rotation)
         image = trans.color_augmentation(image, aug_param.color_aug)
-        loss, image = gradient_ascent_step(
+        activation, image = gradient_ascent_step(
             image, feature_extractor, filter_index, opt_param.learning_rate)
 
         print('>>', pctg, '%', end="\r", flush=True)
@@ -87,10 +87,10 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
     # Decode the resulting input image
     image = imgs.deprocess_image(image[0].numpy())
 
-    return loss, image
+    return activation, image
 
 
-def compute_loss(input_image, model, filter_index):
+def compute_activation(input_image, model, filter_index):
     """Computes the loss for the feature visualization process.
 
     Args:
@@ -100,7 +100,7 @@ def compute_loss(input_image, model, filter_index):
         Defaults to False.
 
     Returns:
-        number: the loss for the specified setting
+        number: the activation for the specified setting
     """
     with rg.gradient_override_map(
             {'Relu': rg.redirected_relu_grad, 'Relu6': rg.redirected_relu6_grad}):
@@ -123,17 +123,17 @@ def gradient_ascent_step(img, model, filter_index, learning_rate):
         learning_rate (number): how much to change the image per iteration.
 
     Returns:
-        tuple: the loss and the modified image
+        tuple: the activation and the modified image
     """
     with tf.GradientTape() as tape:
         tape.watch(img)
-        loss = compute_loss(img, model, filter_index)
+        activation = compute_activation(img, model, filter_index)
     # Compute gradients.
-    grads = tape.gradient(loss, img)
+    grads = tape.gradient(activation, img)
     # Normalize gradients.
     grads = tf.math.l2_normalize(grads)
     img = img + learning_rate * grads
-    return loss, img
+    return activation, img
 
 
 def get_feature_extractor(model, layer_name):
