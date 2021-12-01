@@ -370,7 +370,7 @@ def perform_custom_trans(img, custom_trans):
     if isinstance(custom_trans, dict):
         for key, value in custom_trans.items():
             if key not in globals():
-                raise ValueError("{} is not a recognized transformation".format(key))
+                raise ValueError(f"{key} is not a recognized transformation")
 
             if isinstance(value, list):
                 img = globals()[key](img, *value)
