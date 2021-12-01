@@ -18,21 +18,34 @@ class OptimizationParameters:
     Args:
         iterations (number): how many iterations to optimize for.
         learning_rate (number): update amount after each iteration.
+        optimizer (class): optimizer (only Adam is supported)
     """
 
-    def __init__(self, iterations, learning_rate) -> None:
+    def __init__(self, iterations, learning_rate, optimizer) -> None:
         self.iterations = iterations
         self.learning_rate = learning_rate
+        if isinstance(optimizer, tf.keras.optimizers.Adam):
+            self.optimizer = optimizer
+            self.optimizer.learning_rate.assign(self.learning_rate)
+        elif optimizer is None:
+            self.optimizer = None
+        else:
+            raise ValueError(
+                "The given optimizer is not supported. Needs to be one of None"
+                + "(for traditional gradient ascent) or tf.keras.optimizers.Adam"
+            )
 
 
 class AuxiliaryTransformationParameters:
     """Object for generalizing auxiliary augmentation parameters.
 
     Args:
+        add_blur (bool): whether or not gaussian blur is applied.
+        scale (bool): whether or not scaling is applied.
         pad_crop (bool): whether or not random pad or crop are applied.
-        flip(bool): whether or not flip is applied.
-        vert_rotation(bool): whether or not vert_rotation is applied.
-        noise (bool): whether or not noise is applied.
+        add_flip(bool): whether or not flip is applied.
+        add_rotation(bool): whether or not vert_rotation is applied.
+        add_noise (bool): whether or not noise is applied.
         color_aug(bool): whether or not color augmentation is applied.
     """
 
@@ -59,10 +72,11 @@ class TransformationParameters:
     """Object for generalizing augmentation parameters.
 
     Args:
-        pad (float): the amount of padding to be applied.
-        jitter (float): the amount of jitter to be applied.
-        bilinear (float): the amount of bilinear scaling to be applied.
-        rotation (float): the amount of rotation to be applied
+        pad_size (float): the amount of padding to be applied.
+        pad_mode (str): type of padding to be applied.
+        add_jitter (float): the amount of jitter to be applied.
+        bilinear (list): the amount of bilinear scaling to be applied.
+        rotation (list): the amount of rotation to be applied.
     """
 
     def __init__(
@@ -135,7 +149,7 @@ def visualize_filter(
                         + "TransformationParameters class"
                     )
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, opt_param.learning_rate
+            image, feature_extractor, filter_index, optimizer=opt_param
         )
 
         print(">>", pctg, "%", end="\r", flush=True)
@@ -172,7 +186,7 @@ def compute_activation(input_image, model, filter_index):
 
 
 # @tf.function()
-def gradient_ascent_step(img, model, filter_index, learning_rate):
+def gradient_ascent_step(img, model, filter_index, optimizer=None):
     """Performing one step of gradient ascend.
 
     Args:
@@ -184,14 +198,19 @@ def gradient_ascent_step(img, model, filter_index, learning_rate):
     Returns:
         tuple: the activation and the modified image
     """
+    img = tf.Variable(img)
+
     with tf.GradientTape() as tape:
         tape.watch(img)
         activation = compute_activation(img, model, filter_index)
     # Compute gradients.
     grads = tape.gradient(activation, img)
     # Normalize gradients.
-    grads = tf.math.l2_normalize(grads)
-    img = img + learning_rate * grads
+    if optimizer.optimizer is None:
+        grads = tf.math.l2_normalize(grads)
+        img = img + optimizer.learning_rate * grads
+    else:
+        optimizer.optimizer.apply_gradients(zip([grads], [img]))
     return activation, img
 
 
