@@ -8,6 +8,7 @@ from tensorflow import keras
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
+from luna.featurevis import regularizers as regs
 
 # pylint: disable=too-few-public-methods
 
@@ -106,6 +107,7 @@ def visualize_filter(
     trans_param=None,
     aux_trans_param=None,
     custom_trans=None,
+    regularizers=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -149,7 +151,7 @@ def visualize_filter(
                         + "TransformationParameters class"
                     )
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, optimizer=opt_param
+            image, feature_extractor, filter_index, regularizers, optimizer=opt_param
         )
 
         print(">>", pctg, "%", end="\r", flush=True)
@@ -162,7 +164,7 @@ def visualize_filter(
     return activation, image
 
 
-def compute_activation(input_image, model, filter_index):
+def compute_activation(input_image, model, filter_index, regularizers):
     """Computes the loss for the feature visualization process.
 
     Args:
@@ -182,11 +184,15 @@ def compute_activation(input_image, model, filter_index):
         filter_activation = activation[:, filter_index, :, :]
     else:
         filter_activation = activation[:, :, :, filter_index]
-    return tf.reduce_mean(filter_activation)
+    activation_score = tf.reduce_mean(filter_activation)
+    if regularizers:
+        obj = regs.perform_regularization(activation, regularizers)
+        return obj
+    return activation_score
 
 
 # @tf.function()
-def gradient_ascent_step(img, model, filter_index, optimizer=None):
+def gradient_ascent_step(img, model, filter_index, regularizers, optimizer=None):
     """Performing one step of gradient ascend.
 
     Args:
@@ -202,7 +208,7 @@ def gradient_ascent_step(img, model, filter_index, optimizer=None):
 
     with tf.GradientTape() as tape:
         tape.watch(img)
-        activation = compute_activation(img, model, filter_index)
+        activation = compute_activation(img, model, filter_index, regularizers)
     # Compute gradients.
     grads = tape.gradient(activation, img)
     # Normalize gradients.
