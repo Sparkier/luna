@@ -16,7 +16,7 @@ def model_resnet50v2():
     Returns:
         keras.application: ResNet50V2 Architecture
     """
-    tf.compat.v1.keras.backend.set_image_data_format('channels_last')
+    tf.compat.v1.keras.backend.set_image_data_format("channels_last")
     return keras.applications.ResNet50V2(weights="imagenet", include_top=False)
 
 
@@ -27,9 +27,8 @@ def model_inceptionv3():
     Returns:
         keras.application: InceptionV3 Architecture
     """
-    tf.compat.v1.keras.backend.set_image_data_format('channels_last')
-    return keras.applications.InceptionV3(
-        weights="imagenet", include_top=False)
+    tf.compat.v1.keras.backend.set_image_data_format("channels_last")
+    return keras.applications.InceptionV3(weights="imagenet", include_top=False)
 
 
 def model_inceptionv1():
@@ -39,7 +38,7 @@ def model_inceptionv1():
     Returns:
         googlenet: InceptionV1 Architecture
     """
-    tf.compat.v1.keras.backend.set_image_data_format('channels_first')
+    tf.compat.v1.keras.backend.set_image_data_format("channels_first")
     return googlenet.create_googlenet()
 
 
@@ -61,7 +60,7 @@ def model_vgg16():
     Returns:
         keras.application: vgg16 Architecture
     """
-    tf.compat.v1.keras.backend.set_image_data_format('channels_last')
+    tf.compat.v1.keras.backend.set_image_data_format("channels_last")
     return keras.applications.VGG16(weights="imagenet", include_top=False)
 
 
@@ -72,5 +71,5 @@ def model_vgg19():
     Returns:
         keras.applications: vgg19 Architecture
     """
-    tf.compat.v1.keras.backend.set_image_data_format('channels_last')
+    tf.compat.v1.keras.backend.set_image_data_format("channels_last")
     return keras.applications.VGG19(weights="imagenet", include_top=False)

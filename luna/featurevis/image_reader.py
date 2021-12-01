@@ -22,7 +22,5 @@ def save_npy_as_png(input_path, output_path):
     np.moveaxis(arr, 0, -1)
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         arr = tf.transpose(arr, [0, 2, 1])
-    img = keras.preprocessing.image.array_to_img(
-        arr, data_format="channels_last")
-    keras.preprocessing.image.save_img(
-        out_path, img, data_format="channels_last")
+    img = keras.preprocessing.image.array_to_img(arr, data_format="channels_last")
+    keras.preprocessing.image.save_img(out_path, img, data_format="channels_last")

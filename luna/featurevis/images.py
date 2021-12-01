@@ -6,9 +6,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-COLOR_CORRELATION_SVD_SQRT = np.asarray([[0.26, 0.09, 0.02],
-                                         [0.27, 0.00, -0.05],
-                                         [0.27, -0.09, 0.03]]).astype("float32")
+# pylint: disable=R0914
+
+COLOR_CORRELATION_SVD_SQRT = np.asarray(
+    [[0.26, 0.09, 0.02], [0.27, 0.00, -0.05], [0.27, -0.09, 0.03]]
+).astype("float32")
 
 MAX_NORM_SVD_SQRT = np.max(np.linalg.norm(COLOR_CORRELATION_SVD_SQRT, axis=0))
 
@@ -27,9 +29,9 @@ def initialize_image(width, height, val_range_top=1.0, val_range_bottom=-1.0):
     Returns:
         A randomly generated image.
     """
-    print('initializing image')
+    print("initializing image")
     # We start from a gray image with some random noise
-    if tf.compat.v1.keras.backend.image_data_format() == 'channels_first':
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         img = tf.random.uniform((1, 3, width, height), dtype=tf.dtypes.float32)
     else:
         img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
@@ -51,7 +53,7 @@ def deprocess_image(img):
     Returns:
         A rescaled version of the image.
     """
-    print('Deprocessing image')
+    print("Deprocessing image")
     # compute the normal scores (z scores) and add little noise for uncertainty
     img = ((img - img.mean()) / img.std()) + 1e-5
     # ensure that the variance is 0.15
@@ -86,8 +88,9 @@ def save_image(img, name=None):
     np.save(f"{name}.npy", arr)
 
 
-def initialize_image_ref(width, height, std=None, fft=True,
-                         decorrelate=True, channels=None):
+def initialize_image_ref(
+    width, height, std=None, fft=True, decorrelate=True, channels=None
+):
     """
     Creates an initial randomized image to start feature vis process.
     This could be subject to optimization in the future.
@@ -103,31 +106,30 @@ def initialize_image_ref(width, height, std=None, fft=True,
     Returns:
         A randomly generated image.
     """
-    print('initializing image')
+    print("initializing image")
     # We start from a gray image with some random noise
-    if tf.compat.v1.keras.backend.image_data_format() == 'channels_first':
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         img = tf.random.uniform((1, 3, width, height), dtype=tf.dtypes.float32)
-        shape = [img.shape[0], img.shape[1], img.shape[2], img.shape[3]]
     else:
         img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
-        shape = [img.shape[0], img.shape[3], img.shape[1],
-                 img.shape[2]]  # [batch, ch, h, w]
 
     if fft:
-        image_f = fft_image(shape, std=std)
+        image_f = fft_image(img, std=std)
     else:
-        image_f = np.random.normal(size=shape, scale=std).astype(np.float32)
+        std = std or 0.01
+        image_f = np.random.normal(
+            size=[img.shape[0], img.shape[1], img.shape[2], img.shape[3]], scale=std
+        ).astype(np.float32)
 
     if channels:
         output = tf.nn.sigmoid(image_f)
     else:
-        output = to_valid_rgb(
-            image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
+        output = to_valid_rgb(image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
 
     return output
 
 
-def fft_image(shape, std=None, decay_power=1):
+def fft_image(img, std=None, decay_power=1):
     """Image parameterization using 2D Fourier coefficients.
 
     Args:
@@ -138,17 +140,28 @@ def fft_image(shape, std=None, decay_power=1):
     Returns:
         New image in spatial domain.
     """
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
+        shape = [img.shape[0], img.shape[1], img.shape[2], img.shape[3]]
+    else:
+        shape = [
+            img.shape[0],
+            img.shape[3],
+            img.shape[1],
+            img.shape[2],
+        ]  # [batch, ch, h, w]
+
     batch, channels, height, width = shape
     # real valued fft
     freqs = rfft2d_freqs(height, width)
 
     init_val_size = (2, batch, channels) + freqs.shape
     std = std or 0.01
-    init_val = np.random.normal(
-        size=init_val_size, scale=std).astype(np.float32)
+    init_val = np.random.normal(size=init_val_size, scale=std).astype(np.float32)
     spectrum_real_imag_t = tf.Variable(init_val)
 
+    # Normalize energy
     scale = 1.0 / np.maximum(freqs, 1.0 / max(width, height)) ** decay_power
+    # Scale it by the square root
     scale *= np.sqrt(width * height)
     spectrum_t = tf.complex(spectrum_real_imag_t[0], spectrum_real_imag_t[1])
     scaled_spectrum_t = scale * spectrum_t
@@ -214,5 +227,5 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
     if sigmoid:
         image = tf.nn.sigmoid(image)
     else:
-        image = (2*image-1 / tf.maximum(1.0, tf.abs(2*image-1)))/2 + 0.5
+        image = (2 * image - 1 / tf.maximum(1.0, tf.abs(2 * image - 1))) / 2 + 0.5
     return image

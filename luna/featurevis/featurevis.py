@@ -12,7 +12,7 @@ from luna.featurevis import transformations as trans
 # pylint: disable=too-few-public-methods
 
 
-class OptimizationParameters():
+class OptimizationParameters:
     """object for generalizing optimization parameters.
 
     Args:
@@ -20,37 +20,79 @@ class OptimizationParameters():
         learning_rate (number): update amount after each iteration.
     """
 
-    def __init__(self, iterations, learning_rate):
+    def __init__(self, iterations, learning_rate) -> None:
         self.iterations = iterations
         self.learning_rate = learning_rate
 
 
-class AugmentationParameters():
-    """Object for generalizing augmentation parameters.
+class AuxiliaryTransformationParameters:
+    """Object for generalizing auxiliary augmentation parameters.
 
     Args:
-        blur (bool): whether or not blur is applied.
-        scale (bool): whether or not scale is applied.
         pad_crop (bool): whether or not random pad or crop are applied.
         flip(bool): whether or not flip is applied.
-        rotation(bool): whether or not rotation is applied.
+        vert_rotation(bool): whether or not vert_rotation is applied.
         noise (bool): whether or not noise is applied.
         color_aug(bool): whether or not color augmentation is applied.
     """
 
-    def __init__(self, blur, scale, pad_crop, flip, rotation, noise, color_aug):
-        self.blur = blur
+    def __init__(
+        self,
+        add_blur=False,
+        scale=False,
+        pad_crop=False,
+        add_flip=False,
+        add_rotation=False,
+        add_noise=False,
+        color_aug=False,
+    ) -> None:
+        self.add_blur = add_blur
         self.scale = scale
         self.pad_crop = pad_crop
-        self.flip = flip
-        self.rotation = rotation
-        self.noise = noise
+        self.add_flip = add_flip
+        self.add_rotation = add_rotation
+        self.add_noise = add_noise
         self.color_aug = color_aug
 
-#pylint: disable=too-many-locals
+
+class TransformationParameters:
+    """Object for generalizing augmentation parameters.
+
+    Args:
+        pad (float): the amount of padding to be applied.
+        jitter (float): the amount of jitter to be applied.
+        bilinear (float): the amount of bilinear scaling to be applied.
+        rotation (float): the amount of rotation to be applied
+    """
+
+    def __init__(
+        self,
+        pad_size=None,
+        pad_mode="REFLECT",
+        add_jitter=None,
+        bilinear=None,
+        rotation=None,
+    ) -> None:
+        self.pad_size = pad_size
+        self.pad_mode = pad_mode
+        self.add_jitter = add_jitter
+        self.rescale_val = bilinear
+        self.angles = rotation
 
 
-def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
+# pylint: disable=too-many-locals
+
+
+def visualize_filter(
+    image,
+    model,
+    layer,
+    filter_index,
+    opt_param,
+    trans_param=None,
+    aux_trans_param=None,
+    custom_trans=None,
+):
     """Create a feature visualization for a filter in a layer of the model.
 
     Args:
@@ -67,21 +109,37 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
     feature_extractor = get_feature_extractor(model, layer)
 
     # Temporary method for random choice of
-    print('Starting Feature Vis Process')
+    print("Starting Feature Vis Process")
     for iteration in range(opt_param.iterations):
         pctg = int(iteration / opt_param.iterations * 100)
-        image = trans.crop_or_pad(image, aug_param.pad_crop)
-        image = trans.add_noise(image, aug_param.noise)
-        image = trans.rescale_image(image, aug_param.scale)
-        image = trans.blur_image(image, aug_param.blur)
-        image = trans.random_flip(image, aug_param.flip)
-        image = trans.vert_rotation(image, aug_param.rotation)
-        image = trans.color_augmentation(image, aug_param.color_aug)
+        if not aux_trans_param and not trans_param and not custom_trans:
+            image = trans.standard_transforms(image)
+        elif custom_trans:
+            image = trans.perform_custom_trans(image, custom_trans)
+        else:
+            if aux_trans_param:
+                if isinstance(aux_trans_param, AuxiliaryTransformationParameters):
+                    image = trans.perform_aux_trans(image, aux_trans_param)
+                else:
+                    raise TypeError(
+                        "Wrong class was given. Expected a"
+                        + "AuxiliaryTransformationParameters class"
+                    )
+                # TransParam
+            if trans_param:
+                if isinstance(aux_trans_param, TransformationParameters):
+                    image = trans.perform_trans(image, trans_param)
+                else:
+                    raise TypeError(
+                        "Wrong class was given. Expected a"
+                        + "TransformationParameters class"
+                    )
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, opt_param.learning_rate)
+            image, feature_extractor, filter_index, opt_param.learning_rate
+        )
 
-        print('>>', pctg, '%', end="\r", flush=True)
-    print('>> 100 %')
+        print(">>", pctg, "%", end="\r", flush=True)
+    print(">> 100 %")
     if image.shape[1] < 299 or image.shape[2] < 299:
         image = tf.image.resize(image, [299, 299])
     # Decode the resulting input image
@@ -103,7 +161,8 @@ def compute_activation(input_image, model, filter_index):
         number: the activation for the specified setting
     """
     with rg.gradient_override_map(
-            {'Relu': rg.redirected_relu_grad, 'Relu6': rg.redirected_relu6_grad}):
+        {"Relu": rg.redirected_relu_grad, "Relu6": rg.redirected_relu6_grad}
+    ):
         activation = model(input_image)
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         filter_activation = activation[:, filter_index, :, :]
@@ -112,7 +171,7 @@ def compute_activation(input_image, model, filter_index):
     return tf.reduce_mean(filter_activation)
 
 
-@tf.function()
+# @tf.function()
 def gradient_ascent_step(img, model, filter_index, learning_rate):
     """Performing one step of gradient ascend.
 
