@@ -125,17 +125,20 @@ def rescale(img, scale):
     return img
 
 
-def bilinear_rescale(img, rescale_val, seed=None):
+def bilinear_rescale(img, *args, seed=None):
     """rescaling image by bilinear interpolation
 
     Args:
         img (list): the current state of the feature vis image.
-        rescale_val (list): list of rescaling values
-        seed (int, optional): for reproducibility. Defaults to None.
+        *args (tuple): list of arguments i.e. rescale values
 
     Returns:
         list: the rescaled image.
     """
+    rescale_val = args[0]
+
+    if not isinstance(args[0], list):
+        rescale_val = list(args)
 
     if isinstance(rescale_val, int):
         rescale_val = list(rescale_val)
@@ -199,18 +202,23 @@ def angle_conversion(angle, units):
     return angle
 
 
-def rotation(img, angles, units="degrees", seed=None):
+def rotation(img, *args, units="degrees", seed=None):
     """Rotating the image with random angle
 
     Args:
         img (list): the image data
-        angles (list): list of random numbers for rotation
+        *args (tuple): list of arguments i.e. angles of rotatation
         units (str, optional): the unit of rotation move. Defaults to "degrees".
         seed ([type], optional): for reproducibility. Defaults to None.
 
     Returns:
         list: rotated image with selected values
     """
+    angles = args[0]
+
+    if not isinstance(args[0], list):
+        angles = list(args)
+
     if isinstance(angles, int):
         angles = list(angles)
 

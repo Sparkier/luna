@@ -2,11 +2,14 @@
 The main file for the feature vis process
 """
 from __future__ import absolute_import, division, print_function
+
 import tensorflow as tf
 from tensorflow import keras
 
+from matplotlib.pyplot import figure, imshow, axis
+
 from luna.featurevis import relu_grad as rg
-from luna.featurevis import images as imgs
+from luna.featurevis import images
 from luna.featurevis import transformations as trans
 from luna.featurevis import regularizers as regs
 
@@ -22,7 +25,7 @@ class OptimizationParameters:
         optimizer (class): optimizer (only Adam is supported)
     """
 
-    def __init__(self, iterations, learning_rate, optimizer) -> None:
+    def __init__(self, iterations, learning_rate, optimizer=None) -> None:
         self.iterations = iterations
         self.learning_rate = learning_rate
         if isinstance(optimizer, tf.keras.optimizers.Adam):
@@ -108,6 +111,7 @@ def visualize_filter(
     aux_trans_param=None,
     custom_trans=None,
     regularizers=None,
+    threshold=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -116,6 +120,13 @@ def visualize_filter(
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
+        opt_param (class): the optimizer class to be applied.
+        trans_param (class): transformation parameters class to be applied. Defaults to None.
+        aux_trans_param (class): auxiliary transformation parameters class to be applied.
+                                Defaults to None.
+        custom_trans (dict): customized transformations to be applied. Defaults to None.
+        regularizers (dict): customized regularizers to be applied. Defaults to None.
+        threshold (list): Intermediate steps for visualization. Defaults to None.
 
 
     Returns:
@@ -123,7 +134,7 @@ def visualize_filter(
     """
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
-
+    _threshold_figures = figure(figsize=(15, 10), dpi=200)
     # Temporary method for random choice of
     print("Starting Feature Vis Process")
     for iteration in range(opt_param.iterations):
@@ -155,12 +166,20 @@ def visualize_filter(
         )
 
         print(">>", pctg, "%", end="\r", flush=True)
+
+        # Routine for creating a threshold image for Jupyter Notebooks
+        if isinstance(threshold, list) and (iteration in threshold):
+            threshold_image = _threshold_figures.add_subplot(
+                1, len(threshold), threshold.index(iteration) + 1
+            )
+            threshold_image.title.set_text(f"Step {iteration}")
+            threshold_view(image)
+
     print(">> 100 %")
     if image.shape[1] < 299 or image.shape[2] < 299:
         image = tf.image.resize(image, [299, 299])
     # Decode the resulting input image
-    image = imgs.deprocess_image(image[0].numpy())
-
+    image = images.deprocess_image(image[0].numpy())
     return activation, image
 
 
@@ -229,3 +248,21 @@ def get_feature_extractor(model, layer_name):
     """
     layer = model.get_layer(name=layer_name)
     return keras.Model(inputs=model.inputs, outputs=layer.output)
+
+
+def threshold_view(image):
+    """Intermediate visualizer.
+
+    Args:
+        image (list): Image.
+    """
+    # Process image
+    image = images.deprocess_image(image[0].numpy())
+    image = keras.preprocessing.image.img_to_array(image)
+
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
+        image = tf.transpose(image, [0, 2, 1])
+
+    image = keras.preprocessing.image.array_to_img(image, data_format="channels_last")
+    imshow(image)
+    axis("off")
