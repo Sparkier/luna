@@ -11,6 +11,7 @@ from tensorflow import keras
 from luna.featurevis import images as imgs
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import transformations as trans
+from luna.featurevis import regularizers as regs
 
 
 @dataclass
@@ -27,6 +28,7 @@ def visualize_filter(
     filter_index,
     optimization_parameters,
     transformation=None,
+    regularizers=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -35,8 +37,9 @@ def visualize_filter(
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
-        opt_param (class): the optimizer class to be applied.
+        optimization_parameters (OptimizationParameters): the optimizer class to be applied.
         transformations (function): a function defining the transformations to be perfromed.
+        regularizers (dict): customized regularizers to be applied. Defaults to None.
 
 
     Returns:
@@ -56,7 +59,7 @@ def visualize_filter(
             image = trans.standard_transformation(image)
 
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, optimization_parameters.learning_rate
+            image, feature_extractor, filter_index, regularizers, optimization_parameters.learning_rate
         )
 
         print('>>', pctg, '%', end="\r", flush=True)
@@ -69,14 +72,15 @@ def visualize_filter(
     return activation, image
 
 
-def compute_activation(input_image, model, filter_index):
+def compute_activation(input_image, model, filter_index, regularizers):
     """Computes the loss for the feature visualization process.
 
     Args:
         input_image (array): the image that is used to compute the loss.
         model (object): the model on which to compute the loss.
-        filter_index (number): for which filter to compute the loss.
+        filter_index (int): for which filter to compute the loss.
         Defaults to False.
+        regularizers (dict): Dictionary of regularizers and their values.
 
     Returns:
         number: the activation for the specified setting
@@ -88,16 +92,21 @@ def compute_activation(input_image, model, filter_index):
         filter_activation = activation[:, filter_index, :, :]
     else:
         filter_activation = activation[:, :, :, filter_index]
-    return tf.reduce_mean(filter_activation)
+    activation_score = tf.reduce_mean(filter_activation)
+    if regularizers:
+        obj = regs.perform_regularization(activation, regularizers)
+        return obj
+    return activation_score
 
 
-def gradient_ascent_step(img, model, filter_index, learning_rate):
+def gradient_ascent_step(img, model, filter_index, regularizers, learning_rate):
     """Performing one step of gradient ascend.
 
     Args:
         img (array): the image to be changed by the gradiend ascend.
         model (object): the model with which to perform the image change.
         filter_index (number): which filter to optimize for.
+        regularizers (dict): Dictionary of regularizers and their values.
         learning_rate (number): how much to change the image per iteration.
 
     Returns:
@@ -105,7 +114,7 @@ def gradient_ascent_step(img, model, filter_index, learning_rate):
     """
     with tf.GradientTape() as tape:
         tape.watch(img)
-        activation = compute_activation(img, model, filter_index)
+        activation = compute_activation(img, model, filter_index, regularizers)
     # Compute gradients.
     grads = tape.gradient(activation, img)
     # Normalize gradients.
