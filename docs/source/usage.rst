@@ -1,6 +1,8 @@
 Usage
 =====
 
+Before using luna, you need to install it from pip as follows: ``pip install luna_fviz``.
+
 The following provides an example of how Luna can be used for feature visualization::
 
     from luna.pretrained_models import models
