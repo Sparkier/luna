@@ -8,7 +8,7 @@ You can install Luna via pip as follows: ``pip install luna_fviz``
 
 .. note::
 
-   This project is under active development.
+   This project is under active development. You can find the repository on `GitHub <https://github.com/Sparkier/luna>`__. 
 
 
 *****
