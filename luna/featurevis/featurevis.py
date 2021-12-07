@@ -24,65 +24,7 @@ class OptimizationParameters():
         self.iterations = iterations
         self.learning_rate = learning_rate
 
-class AuxiliaryTransformationParameters:
-    """Object for generalizing auxiliary augmentation parameters.
-
-    Args:
-        add_blur (bool): whether or not gaussian blur is applied.
-        scale (bool): whether or not scaling is applied.
-        pad_crop (bool): whether or not random pad or crop are applied.
-        add_flip(bool): whether or not flip is applied.
-        add_rotation(bool): whether or not vert_rotation is applied.
-        add_noise (bool): whether or not noise is applied.
-        color_aug(bool): whether or not color augmentation is applied.
-    """
-
-    def __init__(
-        self,
-        add_blur=False,
-        scale=False,
-        pad_crop=False,
-        add_flip=False,
-        add_rotation=False,
-        add_noise=False,
-        color_aug=False,
-    ) -> None:
-        self.add_blur = add_blur
-        self.scale = scale
-        self.pad_crop = pad_crop
-        self.add_flip = add_flip
-        self.add_rotation = add_rotation
-        self.add_noise = add_noise
-        self.color_aug = color_aug
-
-
-class TransformationParameters:
-    """Object for generalizing augmentation parameters.
-
-    Args:
-        pad_size (float): the amount of padding to be applied.
-        pad_mode (str): type of padding to be applied.
-        add_jitter (float): the amount of jitter to be applied.
-        bilinear (list): the amount of bilinear scaling to be applied.
-        rotation (list): the amount of rotation to be applied.
-    """
-
-    def __init__(
-        self,
-        pad_size=None,
-        pad_mode="REFLECT",
-        add_jitter=None,
-        bilinear=None,
-        rotation=None,
-    ) -> None:
-        self.pad_size = pad_size
-        self.pad_mode = pad_mode
-        self.add_jitter = add_jitter
-        self.rescale_val = bilinear
-        self.angles = rotation
-
 #pylint: disable=too-many-locals
-
 
 def visualize_filter(
     image,
@@ -90,9 +32,7 @@ def visualize_filter(
     layer,
     filter_index,
     opt_param,
-    trans_param=None,
-    aux_trans_param=None,
-    custom_trans=None,
+    trans_func = None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -102,10 +42,7 @@ def visualize_filter(
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
         opt_param (class): the optimizer class to be applied.
-        trans_param (class): transformation parameters class to be applied. Defaults to None.
-        aux_trans_param (class): auxiliary transformation parameters class to be applied.
-                                Defaults to None.
-        custom_trans (dict): customized transformations to be applied. Defaults to None.
+        trans_func (function): a function defining the transformations to be perfromed.
 
 
     Returns:
@@ -113,35 +50,21 @@ def visualize_filter(
     """
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
-    # Temporary method for random choice of
     print("Starting Feature Vis Process")
     for iteration in range(opt_param.iterations):
         pctg = int(iteration / opt_param.iterations * 100)
-        if not aux_trans_param and not trans_param and not custom_trans:
-            image = trans.standard_transforms(image)
-        elif custom_trans:
-            image = trans.perform_custom_trans(image, custom_trans)
+
+        if trans_func:
+            if not callable(trans_func):
+                raise ValueError("The transformations need to be a function.")
+            image = trans.perform_trans(image, trans_func)
         else:
-            if aux_trans_param:
-                if isinstance(aux_trans_param, AuxiliaryTransformationParameters):
-                    image = trans.perform_aux_trans(image, aux_trans_param)
-                else:
-                    raise TypeError(
-                        "Wrong class was given. Expected a"
-                        + "AuxiliaryTransformationParameters class"
-                    )
-                # TransParam
-            if trans_param:
-                if isinstance(aux_trans_param, TransformationParameters):
-                    image = trans.perform_trans(image, trans_param)
-                else:
-                    raise TypeError(
-                        "Wrong class was given. Expected a"
-                        + "TransformationParameters class"
-                    )
+            image = trans.standard_transforms(image)
+
         activation, image = gradient_ascent_step(
             image, feature_extractor, filter_index, opt_param.learning_rate
         )
+
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
     if image.shape[1] < 299 or image.shape[2] < 299:
@@ -174,7 +97,6 @@ def compute_activation(input_image, model, filter_index):
     return tf.reduce_mean(filter_activation)
 
 
-# @tf.function()
 def gradient_ascent_step(img, model, filter_index, learning_rate):
     """Performing one step of gradient ascend.
 
