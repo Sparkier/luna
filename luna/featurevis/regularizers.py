@@ -66,27 +66,19 @@ def blur_regularizer(activation, blur=-1.0):
     return blur * 0.5 * (tf.reduce_sum((activation - activation_blurred) ** 2))
 
 
-def perform_regularization(obj, regularization):
+def perform_regularization(activation, activation_score, regularization_func):
     """Perfrom a sequence of regularizations
 
     Args:
-        obj (list): filter activation
-        regularization (dict): A dictionary of regularizations where the key is the name of
-                             regularizer (same as function name) and the value is the parameter.
+        activation (list): filter activation.
+        activation_score (array): value of the activation of the layer/channel.
+        regularization_func (function): a function defining the regularizations
+                                        to be perfromed.
 
-    Raises:
-        ValueError: if the called regularizer does not match the function name.
-        ValueError: if the given regularizer is not a dictionary.
 
     Returns:
-        [type]: [description]
+        list: regularized activation_score.
     """
-    if isinstance(regularization, dict):
-        for key, value in regularization.items():
-            if key not in globals():
-                raise ValueError(f"{key} is not a recognized regularization")
-            obj += globals()[key](obj, value)
-    else:
-        raise ValueError("Regularizers, should be dictionaries")
 
-    return obj
+    activation_score = regularization_func(activation, activation_score)
+    return activation_score
