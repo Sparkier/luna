@@ -12,7 +12,6 @@ from matplotlib.pyplot import figure, imshow, axis
 
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
-from luna.featurevis import relu_grad as rg
 from luna.featurevis import transformations as trans
 
 
