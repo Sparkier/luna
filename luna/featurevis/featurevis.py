@@ -8,8 +8,10 @@ from dataclasses import dataclass
 import tensorflow as tf
 from tensorflow import keras
 
-from luna.featurevis import images as imgs
+from matplotlib.pyplot import figure, imshow, axis
+
 from luna.featurevis import relu_grad as rg
+from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
 
 
@@ -29,6 +31,7 @@ def visualize_filter(
     optimization_parameters,
     transformation=None,
     regularization=None,
+    threshold=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -40,12 +43,14 @@ def visualize_filter(
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
         transformations (function): a function defining the transformations to be perfromed.
         regularization (function): customized regularizers to be applied. Defaults to None.
+        threshold (list): Intermediate steps for visualization. Defaults to None.
 
     Returns:
         tuple: activation and result image for the process.
     """
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
+    _threshold_figures = figure(figsize=(15, 10), dpi=200)
     print("Starting Feature Vis Process")
     for iteration in range(optimization_parameters.iterations):
         pctg = int(iteration / optimization_parameters.iterations * 100)
@@ -62,6 +67,15 @@ def visualize_filter(
             optimization_parameters
         )
         print('>>', pctg, '%', end="\r", flush=True)
+
+        # Routine for creating a threshold image for Jupyter Notebooks
+        if isinstance(threshold, list) and (iteration in threshold):
+            threshold_image = _threshold_figures.add_subplot(
+                1, len(threshold), threshold.index(iteration) + 1
+            )
+            threshold_image.title.set_text(f"Step {iteration}")
+            threshold_view(image)
+
     print('>> 100 %')
     if image.shape[1] < 299 or image.shape[2] < 299:
         image = tf.image.resize(image, [299, 299])
@@ -139,3 +153,22 @@ def get_feature_extractor(model, layer_name):
     """
     layer = model.get_layer(name=layer_name)
     return keras.Model(inputs=model.inputs, outputs=layer.output)
+
+
+def threshold_view(image):
+    """Intermediate visualizer.
+
+    Args:
+        image (list): Image.
+    """
+    # Process image
+    image = imgs.deprocess_image(image[0].numpy())
+    image = keras.preprocessing.image.img_to_array(image)
+
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
+        image = tf.transpose(image, [0, 2, 1])
+
+    image = keras.preprocessing.image.array_to_img(
+        image, data_format="channels_last")
+    imshow(image)
+    axis("off")
