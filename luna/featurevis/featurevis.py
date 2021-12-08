@@ -11,7 +11,6 @@ from tensorflow import keras
 from luna.featurevis import images as imgs
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import transformations as trans
-from luna.featurevis import regularizers as regs
 
 
 @dataclass
@@ -58,7 +57,8 @@ def visualize_filter(
             image = trans.standard_transformation(image)
 
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, regularization, optimization_parameters.learning_rate
+            image, feature_extractor, filter_index, regularization,
+            optimization_parameters.learning_rate
         )
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
@@ -94,8 +94,7 @@ def compute_activation(input_image, model, filter_index, regularization):
     if regularization:
         if not callable(regularization):
             raise ValueError("The regularizations need to be a function.")
-        activation_score = regs.perform_regularization(
-            activation, activation_score, regularization)
+        activation_score = regularization(activation, activation_score)
     return activation_score
 
 
