@@ -27,6 +27,7 @@ def visualize_filter(
     filter_index,
     optimization_parameters,
     transformation=None,
+    regularization=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -35,9 +36,9 @@ def visualize_filter(
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
-        opt_param (class): the optimizer class to be applied.
+        optimization_parameters (OptimizationParameters): the optimizer class to be applied.
         transformations (function): a function defining the transformations to be perfromed.
-
+        regularization (function): customized regularizers to be applied. Defaults to None.
 
     Returns:
         tuple: activation and result image for the process.
@@ -56,9 +57,9 @@ def visualize_filter(
             image = trans.standard_transformation(image)
 
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, optimization_parameters.learning_rate
+            image, feature_extractor, filter_index, regularization,
+            optimization_parameters.learning_rate
         )
-
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
     if image.shape[1] < 299 or image.shape[2] < 299:
@@ -69,14 +70,15 @@ def visualize_filter(
     return activation, image
 
 
-def compute_activation(input_image, model, filter_index):
+def compute_activation(input_image, model, filter_index, regularization):
     """Computes the loss for the feature visualization process.
 
     Args:
         input_image (array): the image that is used to compute the loss.
         model (object): the model on which to compute the loss.
-        filter_index (number): for which filter to compute the loss.
+        filter_index (int): for which filter to compute the loss.
         Defaults to False.
+        regularization (function): a function defining the regularizations to be perfromed.
 
     Returns:
         number: the activation for the specified setting
@@ -88,24 +90,31 @@ def compute_activation(input_image, model, filter_index):
         filter_activation = activation[:, filter_index, :, :]
     else:
         filter_activation = activation[:, :, :, filter_index]
-    return tf.reduce_mean(filter_activation)
+    activation_score = tf.reduce_mean(filter_activation)
+    if regularization:
+        if not callable(regularization):
+            raise ValueError("The regularizations need to be a function.")
+        activation_score = regularization(activation, activation_score)
+    return activation_score
 
 
-def gradient_ascent_step(img, model, filter_index, learning_rate):
+def gradient_ascent_step(img, model, filter_index, regularization, learning_rate):
     """Performing one step of gradient ascend.
 
-    Args:
-        img (array): the image to be changed by the gradiend ascend.
-        model (object): the model with which to perform the image change.
-        filter_index (number): which filter to optimize for.
-        learning_rate (number): how much to change the image per iteration.
+      Args:
+          img (array): the image to be changed by the gradiend ascend.
+          model (object): the model with which to perform the image change.
+          filter_index (number): which filter to optimize for.
+          regularization (function): a function defining the regularizations to be perfromed.
+          learning_rate (number): how much to change the image per iteration.
 
-    Returns:
-        tuple: the activation and the modified image
-    """
+      Returns:
+          tuple: the activation and the modified image
+      """
     with tf.GradientTape() as tape:
         tape.watch(img)
-        activation = compute_activation(img, model, filter_index)
+        activation = compute_activation(
+            img, model, filter_index, regularization)
     # Compute gradients.
     grads = tape.gradient(activation, img)
     # Normalize gradients.
