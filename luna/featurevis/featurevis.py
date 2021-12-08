@@ -2,37 +2,31 @@
 The main file for the feature vis process
 """
 from __future__ import absolute_import, division, print_function
+
+from dataclasses import dataclass
+
 import tensorflow as tf
 from tensorflow import keras
 
-from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
+from luna.featurevis import relu_grad as rg
 from luna.featurevis import transformations as trans
 
-# pylint: disable=too-few-public-methods
 
-
+@dataclass
 class OptimizationParameters():
-    """object for generalizing optimization parameters.
+    """object for generalizing optimization parameters."""
+    iterations: int
+    learning_rate: int
 
-    Args:
-        iterations (number): how many iterations to optimize for.
-        learning_rate (number): update amount after each iteration.
-    """
-
-    def __init__(self, iterations, learning_rate):
-        self.iterations = iterations
-        self.learning_rate = learning_rate
-
-#pylint: disable=too-many-locals
 
 def visualize_filter(
     image,
     model,
     layer,
     filter_index,
-    opt_param,
-    trans_func = None,
+    optimization_parameters,
+    transformation=None,
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -42,7 +36,7 @@ def visualize_filter(
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
         opt_param (class): the optimizer class to be applied.
-        trans_func (function): a function defining the transformations to be perfromed.
+        transformations (function): a function defining the transformations to be perfromed.
 
 
     Returns:
@@ -51,18 +45,18 @@ def visualize_filter(
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
     print("Starting Feature Vis Process")
-    for iteration in range(opt_param.iterations):
-        pctg = int(iteration / opt_param.iterations * 100)
+    for iteration in range(optimization_parameters.iterations):
+        pctg = int(iteration / optimization_parameters.iterations * 100)
 
-        if trans_func:
-            if not callable(trans_func):
+        if transformation:
+            if not callable(transformation):
                 raise ValueError("The transformations need to be a function.")
-            image = trans.perform_trans(image, trans_func)
+            image = transformation(image)
         else:
-            image = trans.standard_transforms(image)
+            image = trans.standard_transformation(image)
 
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, opt_param.learning_rate
+            image, feature_extractor, filter_index, optimization_parameters.learning_rate
         )
 
         print('>>', pctg, '%', end="\r", flush=True)

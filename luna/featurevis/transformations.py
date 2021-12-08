@@ -66,8 +66,10 @@ def jitter(img, jitter_dist, seed=None):
     crop = tf.image.random_crop(img, crop_shape, seed=seed)
     img_shape_list = img.get_shape().as_list()
     mid_shp_changed = [
-        img_shape_list[-3] - jitter_dist if img_shape_list[-3] is not None else None,
-        img_shape_list[-2] - jitter_dist if img_shape_list[-3] is not None else None,
+        img_shape_list[-3] -
+        jitter_dist if img_shape_list[-3] is not None else None,
+        img_shape_list[-2] -
+        jitter_dist if img_shape_list[-3] is not None else None,
     ]
     crop.set_shape(img_shape_list[:-3] + mid_shp_changed + img_shape_list[-1:])
 
@@ -140,7 +142,8 @@ def bilinear_rescale(img, *args, seed=None):
     img = tf.convert_to_tensor(img)
     scale = random_select(rescale_val, seed=seed)
     img_shape = tf.shape(img)
-    scale_shape = tf.cast(scale * tf.cast(img_shape[-3:-1], "float32"), "int32")
+    scale_shape = tf.cast(
+        scale * tf.cast(img_shape[-3:-1], "float32"), "int32")
     img = tf.compat.v1.image.resize_bilinear(img, scale_shape)
     return img
 
@@ -162,7 +165,7 @@ def crop_or_pad(img):
 
 
 def ninety_degree_rotation(img):
-    """Rotating the image vertically.
+    """Rotating the image by ninety degree.
 
     Args:
         img (list): image.
@@ -273,7 +276,7 @@ def color_augmentation(img):
     return img
 
 
-def standard_transforms(img):
+def standard_transformation(img):
     """Standard transformations if no transformations were chosen by user (Suggested by Lucid)
 
     Args:
@@ -284,21 +287,8 @@ def standard_transforms(img):
     """
     img = pad(img, 12, pad_mode="constant")
     img = jitter(img, 8)
-    img = bilinear_rescale(img, [1 + (i - 5) / 50.0 for i in range(11)], seed=None)
+    img = bilinear_rescale(
+        img, [1 + (i - 5) / 50.0 for i in range(11)], seed=None)
     img = rotation(img, list(range(-10, 11)) + 5 * [0])
     img = jitter(img, 4)
-    return img
-
-
-def perform_trans(img, trans_func):
-    """Perfrom a sequence of transformations
-
-    Args:
-        img (list): image.
-        trans_func (function): a function defining the transformations to be perfromed.
-
-    Returns:
-        list: transformed image.
-    """
-    img = trans_func(img)
     return img
