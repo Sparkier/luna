@@ -18,6 +18,7 @@ class OptimizationParameters():
     """object for generalizing optimization parameters."""
     iterations: int
     learning_rate: int
+    optimizer: object = None
 
 
 def visualize_filter(
@@ -58,7 +59,7 @@ def visualize_filter(
 
         activation, image = gradient_ascent_step(
             image, feature_extractor, filter_index, regularization,
-            optimization_parameters.learning_rate
+            optimization_parameters
         )
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
@@ -98,7 +99,7 @@ def compute_activation(input_image, model, filter_index, regularization):
     return activation_score
 
 
-def gradient_ascent_step(img, model, filter_index, regularization, learning_rate):
+def gradient_ascent_step(img, model, filter_index, regularization, optimization_parameters):
     """Performing one step of gradient ascend.
 
       Args:
@@ -107,10 +108,13 @@ def gradient_ascent_step(img, model, filter_index, regularization, learning_rate
           filter_index (number): which filter to optimize for.
           regularization (function): a function defining the regularizations to be perfromed.
           learning_rate (number): how much to change the image per iteration.
+          optimization_parameters (OptimizationParameters): optimizer (only Adam is supported)
 
       Returns:
           tuple: the activation and the modified image
-      """
+    """
+    img = tf.Variable(img)
+
     with tf.GradientTape() as tape:
         tape.watch(img)
         activation = compute_activation(
@@ -118,8 +122,11 @@ def gradient_ascent_step(img, model, filter_index, regularization, learning_rate
     # Compute gradients.
     grads = tape.gradient(activation, img)
     # Normalize gradients.
-    grads = tf.math.l2_normalize(grads)
-    img = img + learning_rate * grads
+    if optimization_parameters.optimizer is None:
+        grads = tf.math.l2_normalize(grads)
+        img = img + optimization_parameters.learning_rate * grads
+    else:
+        optimization_parameters.optimizer.apply_gradients(zip([grads], [img]))
     return activation, img
 
 
