@@ -2,55 +2,32 @@
 The main file for the feature vis process
 """
 from __future__ import absolute_import, division, print_function
+
+from dataclasses import dataclass
+
 import tensorflow as tf
 from tensorflow import keras
 
-from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
+from luna.featurevis import relu_grad as rg
 from luna.featurevis import transformations as trans
 
-# pylint: disable=too-few-public-methods
 
-
+@dataclass
 class OptimizationParameters():
-    """object for generalizing optimization parameters.
-
-    Args:
-        iterations (number): how many iterations to optimize for.
-        learning_rate (number): update amount after each iteration.
-    """
-
-    def __init__(self, iterations, learning_rate):
-        self.iterations = iterations
-        self.learning_rate = learning_rate
+    """object for generalizing optimization parameters."""
+    iterations: int
+    learning_rate: int
 
 
-class AugmentationParameters():
-    """Object for generalizing augmentation parameters.
-
-    Args:
-        blur (bool): whether or not blur is applied.
-        scale (bool): whether or not scale is applied.
-        pad_crop (bool): whether or not random pad or crop are applied.
-        flip(bool): whether or not flip is applied.
-        rotation(bool): whether or not rotation is applied.
-        noise (bool): whether or not noise is applied.
-        color_aug(bool): whether or not color augmentation is applied.
-    """
-
-    def __init__(self, blur, scale, pad_crop, flip, rotation, noise, color_aug):
-        self.blur = blur
-        self.scale = scale
-        self.pad_crop = pad_crop
-        self.flip = flip
-        self.rotation = rotation
-        self.noise = noise
-        self.color_aug = color_aug
-
-#pylint: disable=too-many-locals
-
-
-def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
+def visualize_filter(
+    image,
+    model,
+    layer,
+    filter_index,
+    optimization_parameters,
+    transformation=None,
+):
     """Create a feature visualization for a filter in a layer of the model.
 
     Args:
@@ -58,6 +35,8 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
+        opt_param (class): the optimizer class to be applied.
+        transformations (function): a function defining the transformations to be perfromed.
 
 
     Returns:
@@ -65,20 +44,20 @@ def visualize_filter(image, model, layer, filter_index, opt_param, aug_param):
     """
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
+    print("Starting Feature Vis Process")
+    for iteration in range(optimization_parameters.iterations):
+        pctg = int(iteration / optimization_parameters.iterations * 100)
 
-    # Temporary method for random choice of
-    print('Starting Feature Vis Process')
-    for iteration in range(opt_param.iterations):
-        pctg = int(iteration / opt_param.iterations * 100)
-        image = trans.crop_or_pad(image, aug_param.pad_crop)
-        image = trans.add_noise(image, aug_param.noise)
-        image = trans.rescale_image(image, aug_param.scale)
-        image = trans.blur_image(image, aug_param.blur)
-        image = trans.random_flip(image, aug_param.flip)
-        image = trans.vert_rotation(image, aug_param.rotation)
-        image = trans.color_augmentation(image, aug_param.color_aug)
+        if transformation:
+            if not callable(transformation):
+                raise ValueError("The transformations need to be a function.")
+            image = transformation(image)
+        else:
+            image = trans.standard_transformation(image)
+
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, opt_param.learning_rate)
+            image, feature_extractor, filter_index, optimization_parameters.learning_rate
+        )
 
         print('>>', pctg, '%', end="\r", flush=True)
     print('>> 100 %')
@@ -112,7 +91,6 @@ def compute_activation(input_image, model, filter_index):
     return tf.reduce_mean(filter_activation)
 
 
-@tf.function()
 def gradient_ascent_step(img, model, filter_index, learning_rate):
     """Performing one step of gradient ascend.
 
