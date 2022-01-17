@@ -180,6 +180,7 @@ report.txt
 
 #output/input files
 *.png
+!luna.png
 *.npy
 /output
 main.py

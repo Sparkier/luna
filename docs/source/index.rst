@@ -1,3 +1,8 @@
+.. image:: ../../luna.png
+   :width: 100px
+   :alt: icon of a stylized moon
+   :align: right
+
 Luna
 ====
 
