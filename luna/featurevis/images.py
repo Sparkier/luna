@@ -197,10 +197,10 @@ def _linear_decorrelate_color(image):
     """Color correlation matrix.
 
     Args:
-        image (tf.Tensor): Input image.
+        image (tf.Tensor): Input image with a decorrelated color space.
 
     Returns:
-        The decorrolated version of the color space of the input image.
+        The recorrelated version of the color space of the input image.
     """
     t_flat = tf.reshape(image, [-1, 3])
     color_correlation_normalized = COLOR_CORRELATION_SVD_SQRT / MAX_NORM_SVD_SQRT
