@@ -54,17 +54,18 @@ def deprocess_image(img):
     """
     print("Deprocessing image")
     # compute the normal scores (z scores) and add little noise for uncertainty
-    img = ((img - img.mean()) / img.std()) + 1e-5
-    # ensure that the variance is 0.15
-    img *= 0.15
-    # croping the center adn clip the values between 0 and 1
-    img = img[25:-25, 25:-25, :]
-    img += 0.5
-    img = np.clip(img, 0, 1)
+    img = (img - np.min(img))/ (np.max(img) - np.min(img))
+    # img = ((img - img.mean()) / img.std()) + 1e-5
+    # # ensure that the variance is 0.15
+    # img *= 0.15
+    # # croping the center adn clip the values between 0 and 1
+    # #img = img[25:-25, 25:-25, :]
+    # img += 0.5
+    # img = np.clip(img, 0, 1)
 
-    # convert to RGB
-    img *= 255
-    img = np.clip(img, 0, 255).astype("uint8")
+    # # convert to RGB
+    # img *= 255
+    # img = np.clip(img, 0, 255).astype("uint8")
 
     return img
 
@@ -77,14 +78,16 @@ def save_image(img, name=None):
         img (pil.Image): The generated image.
         name (str): A possible name, if none given it is auto generated.
     """
+    print(f"the final array of an image is {img}")
     arr = keras.preprocessing.image.img_to_array(img)
+    print(f"the final array is {arr}")
     if name is None:
         name = datetime.now().isoformat()
         name = name.replace("-", "")
         name = name.replace(":", "")
         name = name.replace("+", "")
         name = name.replace(".", "")
-    np.save(f"{name}.npy", arr)
+    np.save(f"raw_image_test/{name}.npy", arr)
 
 
 def initialize_image_ref(
@@ -111,22 +114,23 @@ def initialize_image_ref(
         img = tf.random.uniform((1, 3, width, height), dtype=tf.dtypes.float32)
     else:
         img = tf.random.uniform((1, width, height, 3), dtype=tf.dtypes.float32)
-
+        #print(img)
     if fft:
         image_f = fft_image(img, std=std)
     else:
         std = std or 0.01
+        np.random.seed(1)
         image_f = np.random.normal(
             size=[img.shape[0], img.shape[1],
                   img.shape[2], img.shape[3]], scale=std
         ).astype(np.float32)
-
+        #print("output image of random normal is {}".format(image_f))
     if channels:
         output = tf.nn.sigmoid(image_f)
     else:
         output = to_valid_rgb(
             image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
-
+    #print("image output after convering to valid RGB is {}".format(output))
     return output
 
 
@@ -226,6 +230,7 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
         image += COLOR_MEAN
     if sigmoid:
         image = tf.nn.sigmoid(image)
+        #print("output image after sigmoid {}".format(image))
     else:
         image = (2 * image - 1 / tf.maximum(1.0,
                  tf.abs(2 * image - 1))) / 2 + 0.5

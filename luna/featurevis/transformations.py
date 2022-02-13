@@ -100,7 +100,10 @@ def random_select(rand_values, seed=None):
         list: list of random values
     """
     scale_list = list(rand_values)
-    rand_n = tf.random.uniform((), 0, len(scale_list), "int32", seed)
+    rand_n = tf.random.uniform((), 0, len(scale_list), "int32", seed=seed)
+    #print(rand_n)
+    #rand_n = 0
+    #rand_n = 20
     return tf.constant(scale_list)[rand_n]
 
 
@@ -207,13 +210,8 @@ def rotation(img, *args, units="degrees", seed=None):
     Returns:
         list: rotated image with selected values
     """
+
     angles = args[0]
-
-    if not isinstance(args[0], list):
-        angles = list(args)
-
-    if isinstance(angles, int):
-        angles = list(angles)
 
     img = tf.convert_to_tensor(img)
     angle = random_select(angles, seed=seed)
@@ -289,6 +287,6 @@ def standard_transformation(img):
     img = jitter(img, 8)
     img = bilinear_rescale(
         img, [1 + (i - 5) / 50.0 for i in range(11)], seed=None)
-    img = rotation(img, list(range(-10, 11)) + 5 * [0])
+    img = rotation(img, list(range(-10, 11))+5*[0])
     img = jitter(img, 4)
     return img
