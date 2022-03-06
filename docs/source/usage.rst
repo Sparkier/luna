@@ -24,9 +24,7 @@ The following provides an example of how Luna can be used for feature visualizat
     color_aug = False
     
     opt_param = featurevis.OptimizationParameters(iterations, learning_rate)
-    aug_param = featurevis.AugmentationParameters(blur, scale, pad_crop, flip, rotation, noise, color_aug)
     
-    loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param, aug_param)
+    loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param)
     images.save_image(image, name="test")
     image_reader.save_npy_as_png("test.npy", ".")
-

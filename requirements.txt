@@ -7,3 +7,4 @@ m2r2
 build
 twine
 matplotlib
+setuptools

@@ -1,6 +1,6 @@
 # Luna
 
-<img src="luna.png" alt="icon showing a stylized moon" width="100"/>
+<img src="https://raw.githubusercontent.com/Sparkier/luna/master/luna.png" alt="icon showing a stylized moon" width="100"/>
 
 Inspired by [Lucid](https://github.com/tensorflow/lucid), **Luna** is a Feature Visualization package for Tensorflow.
 While Lucid does not support Tensorflow 2, **Luna** was built with Tensorflow 2 at its core.
