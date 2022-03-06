@@ -24,7 +24,7 @@ The following provides an example of how Luna can be used for feature visualizat
         """
         img = scale_values(img)
         img = blur(img)
-    return img
+        return img
 
     opt_param = featurevis.OptimizationParameters(iterations, learning_rate)
     loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param, transformation=my_trans)
