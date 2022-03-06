@@ -7,6 +7,7 @@ The following provides an example of how Luna can be used for feature visualizat
 
     from luna.pretrained_models import models
     from luna.featurevis import featurevis, images, image_reader
+    from luna.featurevis.transformations import *
     
     
     model = models.model_inceptionv3()
@@ -15,16 +16,17 @@ The following provides an example of how Luna can be used for feature visualizat
     iterations = 2500
     learning_rate = 0.7
     
-    blur = True
-    scale = True
-    pad_crop = False
-    flip = False
-    rotation = False
-    noise = False
-    color_aug = False
-    
+    # Define a function containing all the transformations that you would like to apply
+    # At the moment scaling and blur yield the best results.
+    # Nonetheless, all other lucid transformations are implemented in featurevis.transformations and can be added too.
+    def my_trans(img):
+        """Function containing all the desired transformations
+        """
+        img = scale_values(img)
+        img = blur(img)
+    return img
+
     opt_param = featurevis.OptimizationParameters(iterations, learning_rate)
-    
-    loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param)
+    loss, image = featurevis.visualize_filter(image, model, "mixed5", 30, opt_param, transformation=my_trans)
     images.save_image(image, name="test")
     image_reader.save_npy_as_png("test.npy", ".")
