@@ -9,10 +9,10 @@ from tensorflow import keras
 import json
 dirname = os.path.dirname(__file__)
 output_path = r'C:\Users\lucaz\Documents\Fuzhi\GitHub\featurevis_experimentation\output_tests\DanielNet'
-image_size = 32
-model_name = "DanielNet"#"resnet50v2"#"vgg16" #inceptionV3"#"vgg19" #"inceptionV3"
-layer_name = "conv2d_1" #"conv2d_4" #"mixed5"#"conv2_block1_1_conv" #"block3_conv1"#"mixed5" #"block3_conv4"#"mixed5"
-channel_num = 5 #5 #5 #40 #30
+image_size = 224
+model_name = "inceptionV3" #"DanielNet"#"resnet50v2"#"vgg16" #inceptionV3"#"vgg19" #"inceptionV3"
+layer_name = "mixed5" #"conv2d_4" #"mixed5"#"conv2_block1_1_conv" #"block3_conv1"#"mixed5" #"block3_conv4"#"mixed5"
+channel_num = 30 #5 #5 #40 #30
 
 # resnet v250 layer: conv2_block1_1_conv , channel: 3
 # vgg16 layer: block3_conv1 channel : 2
@@ -51,11 +51,11 @@ threshold=[1]
 #image = images.initialize_image(image_size,image_size)
 image = images.initialize_image_ref(image_size,image_size, fft=False, decorrelate=False)
 #model = models.model_vgg19()
-#model = models.model_inceptionv3()
+model = models.model_inceptionv3()
 #model = models.model_vgg16()
 #model = models.model_resnet50v2()
-model = keras.models.load_model(r"C:\Users\lucaz\Documents\Fuzhi\GitHub\luna\nws_main_00001")
-print(model.get_layer(layer_name).get_weights()[0][:,:,:,channel_num])
+#model = keras.models.load_model(r"C:\Users\lucaz\Documents\Fuzhi\GitHub\luna\nws_main_00001")
+#print(model.get_layer(layer_name).get_weights()[0][:,:,:,channel_num])
 print(model.summary())
 
 def my_trans(img):

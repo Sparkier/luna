@@ -5,8 +5,8 @@ path_lucid = r"C:\Users\lucaz\Documents\Fuzhi\GitHub\featurevis_experimentation\
 
 luna_image = np.load(f"{path_luna}/DanielNet_conv2d_1_0.npy")
 
-print(f"luna {luna_image}")
+print(f"luna {luna_image.shape}", )
 
 lucid_image = np.load(f"{path_lucid}/Conv2D_1_0.npy")
 
-print(f" lucid {lucid_image}")
+print(f" lucid {lucid_image.shape}")

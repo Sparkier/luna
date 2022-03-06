@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import final
 
 import tensorflow as tf
-
+import numpy as np
 from tensorflow import keras
 
 from matplotlib.pyplot import figure, imshow, axis
@@ -17,6 +17,7 @@ from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
 import json
+from PIL import Image
 
 all_score = {}
 @dataclass
@@ -54,6 +55,8 @@ def visualize_filter(
     """
 
     image_opt = tf.Variable(image_opt)
+    #lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=0.05,
+                                                       #     decay_steps=10000,decay_rate=0.9)
     optimizer = tf.keras.optimizers.Adam(epsilon=1e-08, learning_rate=0.05)
     #optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=0.05)
     print(f"we are in feature vis function, the input image is {image_opt}")
@@ -68,7 +71,7 @@ def visualize_filter(
     #     return lr * 1 / (1 + decay * iteration)
 
 
-    #@tf.function
+    @tf.function
     def activation_score():
         with rg.gradient_override_map({'Relu': rg.redirected_relu_grad, 'Relu6': rg.redirected_relu6_grad}):
             activation = feature_extractor(image_opt)
@@ -106,6 +109,7 @@ def visualize_filter(
         # )
         #lr = lr_time_based_decay(iteration.numpy(), lr)
         #optimizer = tf.keras.optimizers.Adam(epsilon=1e-08, learning_rate=lr)
+
         optimizer.minimize(activation_score, [image_opt])
         #print(f"after step {iteration} image is {image_opt}")
         # if iteration == optimization_parameters.iterations -1:
@@ -124,10 +128,21 @@ def visualize_filter(
     # print(image_opt.shape)
     # print(type(image_opt))
     print(image_opt)
+    im = (image_opt - np.min(image_opt))/ (np.max(image_opt) - np.min(image_opt))
+    #im = image_opt
+    #print(im)
+    #im = np.clip(im, 0, 255).astype("uint8")
+    print(im)
+    np.save("luna_512.npy", im)
+    Image.fromarray((im[0].numpy() *255).astype(np.uint8)).save("luna_512.png")
+
+    plt.imshow(im[0].numpy())
+    plt.show()
+
     image_opt = imgs.deprocess_image(image_opt[0].numpy())
     # print(image_opt.shape)
     # print(type(image_opt))
-    print(image_opt)
+    #print(image_opt)
     #file = open(f'all_score_layer_{layer}_channel_{filter_index}.json', 'w')
     #file= json.dump(str(all_score), file)
     return image_opt

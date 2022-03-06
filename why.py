@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 dirname = os.path.dirname(__file__)
 # layer: conv2d, channel:5
+from PIL import Image
 
 
 
@@ -12,7 +13,10 @@ np.random.seed(1)
 image_f = np.random.normal(size=[1, 32, 32, 3], scale=0.01).astype(np.float32)
 image = tf.nn.sigmoid(image_f)
 image_test = tf.nn.sigmoid(image_f)
+np.save("luna_0.npy", image_test)
 
+#im = tf.keras.utils.img_to_array(image_test[0])
+Image.fromarray((image_test[0].numpy() *255).astype(np.uint8)).save("test_test_test.png")
 
 #Daniel model
 model = keras.models.load_model(r"C:\Users\lucaz\Documents\Fuzhi\GitHub\luna\nws_main_00001")
@@ -38,6 +42,7 @@ for i in range(512):
     optimizer.minimize(compute_activation, [img])
     print(f"after step {i} image is {img}")
 
+# compare the gradients
 
 
 

@@ -54,7 +54,7 @@ def deprocess_image(img):
     """
     print("Deprocessing image")
     # compute the normal scores (z scores) and add little noise for uncertainty
-    img = (img - np.min(img))/ (np.max(img) - np.min(img))
+    #img = (img - np.min(img))/ (np.max(img) - np.min(img))
     # img = ((img - img.mean()) / img.std()) + 1e-5
     # # ensure that the variance is 0.15
     # img *= 0.15
