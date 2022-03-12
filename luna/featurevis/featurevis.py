@@ -4,6 +4,7 @@ The main file for the feature vis process
 from __future__ import absolute_import, division, print_function
 
 from dataclasses import dataclass
+from typing import Optional
 
 import tensorflow as tf
 from tensorflow import keras
@@ -14,13 +15,12 @@ from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
 
-
 @dataclass
 class OptimizationParameters():
     """object for generalizing optimization parameters."""
     iterations: int
-    learning_rate: int
-    optimizer: object = None
+    learning_rate: Optional[int]
+    optimizer: Optional[object]
 
 
 def visualize_filter(
@@ -32,6 +32,7 @@ def visualize_filter(
     transformation=None,
     regularization=None,
     threshold=None,
+    minimize = False
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -44,6 +45,8 @@ def visualize_filter(
         transformations (function): a function defining the transformations to be perfromed.
         regularization (function): customized regularizers to be applied. Defaults to None.
         threshold (list): Intermediate steps for visualization. Defaults to None.
+        minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
+                         for adam optimizer.
 
     Returns:
         tuple: activation and result image for the process.
@@ -51,6 +54,7 @@ def visualize_filter(
     image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
     _threshold_figures = figure(figsize=(15, 10), dpi=200)
+
     print("Starting Feature Vis Process")
     for iteration in range(optimization_parameters.iterations):
         pctg = int(iteration / optimization_parameters.iterations * 100)
@@ -64,8 +68,9 @@ def visualize_filter(
 
         activation, image = gradient_ascent_step(
             image, feature_extractor, filter_index, regularization,
-            optimization_parameters
+            optimization_parameters, minimize=minimize
         )
+
         print('>>', pctg, '%', end="\r", flush=True)
 
         # Routine for creating a threshold image for Jupyter Notebooks
@@ -79,8 +84,12 @@ def visualize_filter(
     print('>> 100 %')
     if image.shape[1] < 299 or image.shape[2] < 299:
         image = tf.image.resize(image, [299, 299])
-    # Decode the resulting input image
-    image = imgs.deprocess_image(image[0].numpy())
+
+    # Decode the resulting input image when gradient ascent is used.
+    if (minimize is False) and (optimization_parameters.optimizer is None):
+        image = imgs.deprocess_image(image[0].numpy())
+    else:
+        image= image[0].numpy()
 
     return activation, image
 
@@ -113,7 +122,8 @@ def compute_activation(input_image, model, filter_index, regularization):
     return activation_score
 
 
-def gradient_ascent_step(img, model, filter_index, regularization, optimization_parameters):
+def gradient_ascent_step(img, model, filter_index, regularization, optimization_parameters,
+                         minimize):
     """Performing one step of gradient ascend.
 
       Args:
@@ -121,26 +131,36 @@ def gradient_ascent_step(img, model, filter_index, regularization, optimization_
           model (object): the model with which to perform the image change.
           filter_index (number): which filter to optimize for.
           regularization (function): a function defining the regularizations to be perfromed.
-          learning_rate (number): how much to change the image per iteration.
           optimization_parameters (OptimizationParameters): optimizer (only Adam is supported)
+          minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
+                           for adam optimizer.
 
       Returns:
           tuple: the activation and the modified image
     """
     img = tf.Variable(img)
+    if not minimize:
+        with tf.GradientTape() as tape:
+            tape.watch(img)
+            activation = compute_activation(
+                img, model, filter_index, regularization)
 
-    with tf.GradientTape() as tape:
-        tape.watch(img)
-        activation = compute_activation(
-            img, model, filter_index, regularization)
-    # Compute gradients.
-    grads = tape.gradient(activation, img)
-    # Normalize gradients.
-    if optimization_parameters.optimizer is None:
-        grads = tf.math.l2_normalize(grads)
-        img = img + optimization_parameters.learning_rate * grads
+        # Compute gradients.
+        grads = tape.gradient(activation, img)
+        # Normalize gradients.
+        if optimization_parameters.optimizer is None:
+            grads = tf.math.l2_normalize(grads)
+            # fallback to standard learning for apply gradient ascent
+            learning_rate = optimization_parameters.learning_rate or 0.7
+            img = img + learning_rate * grads
+        else:
+            optimization_parameters.optimizer.apply_gradients(zip([grads*-1], [img]))
     else:
-        optimization_parameters.optimizer.apply_gradients(zip([grads], [img]))
+        def compute_loss():
+            activation = compute_activation(img, model, filter_index, regularization)
+            activation = (-1)*activation
+            return activation
+        activation = optimization_parameters.optimizer.minimize(compute_loss, [img])
     return activation, img
 
 

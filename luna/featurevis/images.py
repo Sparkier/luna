@@ -116,6 +116,8 @@ def initialize_image_ref(
         image_f = fft_image(img, std=std)
     else:
         std = std or 0.01
+        # For replication purposes
+        np.random.seed(1)
         image_f = np.random.normal(
             size=[img.shape[0], img.shape[1],
                   img.shape[2], img.shape[3]], scale=std
