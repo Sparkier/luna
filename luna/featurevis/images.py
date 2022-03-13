@@ -118,7 +118,7 @@ def initialize_image_ref(
     else:
         std = std or 0.01
         if seed is not None:
-             np.random.seed(seed)
+            np.random.seed(seed)
         image_f = np.random.normal(
             size=[img.shape[0], img.shape[1],
                   img.shape[2], img.shape[3]], scale=std
