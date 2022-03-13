@@ -88,7 +88,7 @@ def save_image(img, name=None):
 
 
 def initialize_image_ref(
-    width, height, std=None, fft=True, decorrelate=True, channels=None
+    width, height, std=None, fft=True, decorrelate=True, channels=None,  seed=None
 ):
     """
     Creates an initial randomized image to start feature vis process.
@@ -101,6 +101,7 @@ def initialize_image_ref(
         fft (boolean): Image parameterization with fast fourier transformation.
         deccorelate (boolean): the color interpretation of the image tensor's color.
         channels (boolean): True for gray images.
+        seed (int): Random seed for the image initialization for reproducibility.
 
     Returns:
         A randomly generated image.
@@ -116,8 +117,8 @@ def initialize_image_ref(
         image_f = fft_image(img, std=std)
     else:
         std = std or 0.01
-        # For replication purposes
-        np.random.seed(1)
+        if seed is not None:
+             np.random.seed(seed)
         image_f = np.random.normal(
             size=[img.shape[0], img.shape[1],
                   img.shape[2], img.shape[3]], scale=std
