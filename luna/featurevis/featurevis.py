@@ -107,9 +107,8 @@ def compute_activation(input_image, model, filter_index, regularization):
     Returns:
         number: the activation for the specified setting
     """
-    with rg.gradient_override_map(
-            {'Relu': rg.redirected_relu_grad, 'Relu6': rg.redirected_relu6_grad}):
-        activation = model(input_image)
+
+    activation = model(input_image)
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         filter_activation = activation[:, filter_index, :, :]
     else:
@@ -147,6 +146,7 @@ def gradient_ascent_step(img, model, filter_index, regularization, optimization_
 
         # Compute gradients.
         grads = tape.gradient(activation, img)
+
         # Normalize gradients.
         if optimization_parameters.optimizer is None:
             grads = tf.math.l2_normalize(grads)
@@ -154,7 +154,9 @@ def gradient_ascent_step(img, model, filter_index, regularization, optimization_
             learning_rate = optimization_parameters.learning_rate or 0.7
             img = img + learning_rate * grads
         else:
-            optimization_parameters.optimizer.apply_gradients(zip([grads*-1], [img]))
+            grads_relu_0 = rg.redirected_relu_grad(img, grads*-1)
+            grads_modified = rg.redirected_relu6_grad(img, grads_relu_0)
+            optimization_parameters.optimizer.apply_gradients(zip([grads_modified], [img]))
     else:
         def compute_loss():
             activation = compute_activation(img, model, filter_index, regularization)
