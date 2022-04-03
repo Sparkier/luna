@@ -12,7 +12,7 @@ The following provides an example of how Luna can be used for feature visualizat
 
     model = models.model_inceptionv3()
     model.trainable = False
-    image = images.initialize_image(324, 324)
+    image = images.initialize_image_ref(299, 299, fft=False, decorrelate=False, seed=1)
 
     iterations = 512
     learning_rate = 0.7
