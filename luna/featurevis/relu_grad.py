@@ -40,7 +40,6 @@ def redirected_relu_grad(image, grad):
     return tf.where(return_relu_grad, relu_grad, result_grad)
 
 
-#pylint: disable=R0914
 def redirected_relu6_grad(image, grad):
     """Compute ReLu6 gradients
 
