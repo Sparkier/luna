@@ -1,0 +1,32 @@
+luna.featurevis.relu\_grad
+==========================
+
+.. automodule:: luna.featurevis.relu_grad
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      gradient_override_map
+      redirected_relu6_grad
+      redirected_relu_grad
+      register_to_random_name
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

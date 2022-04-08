@@ -1,0 +1,36 @@
+luna.featurevis.transformations
+===============================
+
+.. automodule:: luna.featurevis.transformations
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      add_noise
+      blur_image
+      color_augmentation
+      crop_or_pad
+      gaussian_blur
+      random_flip
+      rescale_image
+      vert_rotation
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
