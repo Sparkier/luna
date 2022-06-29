@@ -15,6 +15,7 @@ from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import transformations as trans
 
+
 @dataclass
 class OptimizationParameters():
     """object for generalizing optimization parameters."""
@@ -23,25 +24,25 @@ class OptimizationParameters():
     optimizer: Optional[object]
 
 
-def visualize_filter(
+def visualize(
     image,
     model,
     layer,
-    filter_index,
     optimization_parameters,
+    filter_index=None,
     transformation=None,
     regularization=None,
     threshold=None,
-    minimize = False
+    minimize=False
 ):
-    """Create a feature visualization for a filter in a layer of the model.
+    """Create a feature visualization for a filter in a layer or a whole layer of the model.
 
     Args:
         image (array): the image to be modified by the feature vis process.
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
-        filter_index (number): the index of the filter to be visualized.
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
+        filter_index (number): the index of the filter to be visualized. Whole layer if None.
         transformations (function): a function defining the transformations to be perfromed.
         regularization (function): customized regularizers to be applied. Defaults to None.
         threshold (list): Intermediate steps for visualization. Defaults to None.
@@ -67,9 +68,8 @@ def visualize_filter(
             image = trans.standard_transformation(image)
 
         activation, image = gradient_ascent_step(
-            image, feature_extractor, filter_index, regularization,
-            optimization_parameters, minimize=minimize
-        )
+            image, feature_extractor, regularization, optimization_parameters, minimize,
+            filter_index=filter_index)
 
         print('>>', pctg, '%', end="\r", flush=True)
 
@@ -89,31 +89,32 @@ def visualize_filter(
     if (minimize is False) and (optimization_parameters.optimizer is None):
         image = imgs.deprocess_image(image[0].numpy())
     else:
-        image= image[0].numpy()
+        image = image[0].numpy()
 
     return activation, image
 
 
-def compute_activation(input_image, model, filter_index, regularization):
+def compute_activation(input_image, model,  regularization, filter_index=None):
     """Computes the loss for the feature visualization process.
 
     Args:
         input_image (array): the image that is used to compute the loss.
         model (object): the model on which to compute the loss.
-        filter_index (int): for which filter to compute the loss.
-        Defaults to False.
         regularization (function): a function defining the regularizations to be perfromed.
+        filter_index (int): for which filter to compute the loss. Whole layer if None.
 
     Returns:
         number: the activation for the specified setting
     """
-
     activation = model(input_image)
-    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        filter_activation = activation[:, filter_index, :, :]
+    if filter_index is None:
+        activation_score = tf.reduce_mean(activation)
     else:
-        filter_activation = activation[:, :, :, filter_index]
-    activation_score = tf.reduce_mean(filter_activation)
+        if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
+            filter_activation = activation[:, filter_index, :, :]
+        else:
+            filter_activation = activation[:, :, :, filter_index]
+        activation_score = tf.reduce_mean(filter_activation)
     if regularization:
         if not callable(regularization):
             raise ValueError("The regularizations need to be a function.")
@@ -121,18 +122,18 @@ def compute_activation(input_image, model, filter_index, regularization):
     return activation_score
 
 
-def gradient_ascent_step(img, model, filter_index, regularization, optimization_parameters,
-                         minimize):
+def gradient_ascent_step(img, model, regularization, optimization_parameters,
+                         minimize, filter_index=None):
     """Performing one step of gradient ascend.
 
       Args:
           img (array): the image to be changed by the gradiend ascend.
           model (object): the model with which to perform the image change.
-          filter_index (number): which filter to optimize for.
           regularization (function): a function defining the regularizations to be perfromed.
           optimization_parameters (OptimizationParameters): optimizer (only Adam is supported)
           minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
                            for adam optimizer.
+          filter_index (number): which filter to optimize for. Whole layer if None.
 
       Returns:
           tuple: the activation and the modified image
