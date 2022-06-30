@@ -26,7 +26,6 @@ def visualize(
     image,
     objective,
     optimization_parameters,
-    filter_index=None,
     transformation=None,
     threshold=None,
     minimize=False
@@ -145,8 +144,7 @@ def visualize_layer(
     objective = objectives.LayerObjective(model, layer, regularization)
     return visualize(image, objective, optimization_parameters, transformation, threshold, minimize)
 
-def gradient_ascent_step(img, objective, optimization_parameters,
-                         minimize):
+def gradient_ascent_step(img, objective, optimization_parameters, minimize):
     """Performs one step of gradient ascent.
 
       Args:

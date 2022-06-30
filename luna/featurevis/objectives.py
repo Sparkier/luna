@@ -1,13 +1,13 @@
 import tensorflow as tf
 
 class FilterObjective(object):
-    """ Feature visualization of a given channel in a layer of a model.
-        Computes the mean activation of the specified channel.
+    """ Feature visualization of a given filter in a layer of a model.
+        Computes the mean activation of the specified filter. 
     """
         
     def __init__(self, model, layer, filter_index, regularization=None):
-        """ Feature visualization of a given channel in a layer of a model.
-            Computes the mean activation of the channel.
+        """ Feature visualization of a given filter in a layer of a model.
+            Computes the mean activation of the filter.
             Args: 
                 model (object): the model to be used for the feature visualization.
                 layer (string): the name of the layer to be used in the visualization.

@@ -131,9 +131,7 @@ def initialize_image_ref(
             image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
     else:
         output = tf.nn.sigmoid(image_f)
-
-        
-
+    
     return output
 
 
