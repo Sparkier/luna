@@ -5,17 +5,20 @@ class FilterObjective(object):
         Computes the mean activation of the specified channel.
     """
         
-    def __init__(self, filter_index, regularization=None):
+    def __init__(self, model, layer, filter_index, regularization=None):
         """ Feature visualization of a given channel in a layer of a model.
             Computes the mean activation of the channel.
             Args: 
+                model (object): the model to be used for the feature visualization.
+                layer (string): the name of the layer to be used in the visualization.
                 filter_index (number): the index of the filter to be visualized.
                 regularization (function): customized regularizers to be applied. Defaults to None.
         """
+        self.model = get_feature_extractor(model, layer)
         self.filter_index = filter_index
         self.regularization = regularization
 
-    def loss(self, input_image, model):
+    def loss(self, input_image):
         """Computes the loss for the feature visualization process.
 
         Args:
@@ -25,7 +28,7 @@ class FilterObjective(object):
             number: the loss for the specified setting
         """
 
-        activation = model(input_image)
+        activation = self.model(input_image)
         if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
             filter_activation = activation[:, self.filter_index, :, :]
         else:
@@ -41,15 +44,18 @@ class LayerObjective(object):
     """ Deepdream visualization of a layer, see Mordvintsev et al. 2015.
         Computes (mean activation)^2 of the input.
     """
-    def __init__(self, regularization=None):
+    def __init__(self, model, layer, regularization=None):
         """ Deepdream visualization of a layer, see Mordvintsev et al. 2015.
             Computes (mean activation)^2 of the input.
             Args: 
+                model (object): the model to be used for the feature visualization.
+                layer (string): the name of the layer to be used in the visualization.
                 regularization (function): customized regularizers to be applied. Defaults to None.
         """
+        self.model = get_feature_extractor(model, layer)
         self.regularization = regularization
 
-    def loss(self, input_image, model):
+    def loss(self, input_image):
         """Computes the layer loss for the feature visualization process.
 
         Args:
@@ -59,7 +65,7 @@ class LayerObjective(object):
             number: the activation for the specified setting
         """
 
-        activation = model(input_image)
+        activation = self.model(input_image)
         activation_score = tf.reduce_mean(activation**2)
         if self.regularization:
             if not callable(self.regularization):
@@ -67,5 +73,14 @@ class LayerObjective(object):
             activation_score = self.regularization(activation, activation_score)
         return -activation_score
 
+def get_feature_extractor(model, layer_name):
+    """Builds a model that that returns the activation of the specified layer.
+
+    Args:
+        model (object): the model used as a basis for the feature extractor.
+        layer (string): the layer at which to cap the original model.
+    """
+    layer = model.get_layer(name=layer_name)
+    return tf.keras.Model(inputs=model.inputs, outputs=layer.output)
 
 
