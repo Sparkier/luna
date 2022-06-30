@@ -22,7 +22,7 @@ class OptimizationParameters():
     learning_rate: Optional[int]
     optimizer: Optional[object]
 
-# pylint: disable-msg=too-many-locals
+
 def visualize(
     image,
     model,
@@ -57,8 +57,6 @@ def visualize(
 
     print("Starting Feature Vis Process")
     for iteration in range(optimization_parameters.iterations):
-        pctg = int(iteration / optimization_parameters.iterations * 100)
-
         if transformation:
             if not callable(transformation):
                 raise ValueError("The transformations need to be a function.")
@@ -71,7 +69,8 @@ def visualize(
             tf_image, feature_extractor, regularization, optimization_parameters, minimize,
             filter_index=filter_index)
 
-        print('>>', pctg, '%', end="\r", flush=True)
+        print('>>', int(iteration / optimization_parameters.iterations * 100), '%',
+              end="\r", flush=True)
 
         # Routine for creating a threshold image for Jupyter Notebooks
         if isinstance(threshold, list) and (iteration in threshold):
@@ -92,7 +91,7 @@ def visualize(
     return activation, tf_image
 
 
-def compute_activation(input_image, model ,regularization, filter_index=None):
+def compute_activation(input_image, model, regularization, filter_index=None):
     """Computes the loss for the feature visualization process.
 
     Args:
@@ -141,8 +140,8 @@ def gradient_ascent_step(img, model, regularization, optimization_parameters,
         with tf.GradientTape() as tape:
             tape.watch(img)
             activation = compute_activation(
-                input_image = img, model = model, regularization = regularization,
-                            filter_index = filter_index)
+                input_image=img, model=model, regularization=regularization,
+                filter_index=filter_index)
 
         # Compute gradients.
         grads = tape.gradient(activation, img)
