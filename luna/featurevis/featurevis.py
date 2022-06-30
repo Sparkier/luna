@@ -13,7 +13,6 @@ from matplotlib.pyplot import figure, imshow, axis
 
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
-from luna.featurevis import transformations as trans
 
 
 @dataclass
@@ -52,26 +51,26 @@ def visualize(
     Returns:
         tuple: activation and result image for the process.
     """
-    image = tf.Variable(image)
+    tf_image = tf.Variable(image)
     feature_extractor = get_feature_extractor(model, layer)
     _threshold_figures = figure(figsize=(15, 10), dpi=200)
 
     print("Starting Feature Vis Process")
     for iteration in range(optimization_parameters.iterations):
-        pctg = int(iteration / optimization_parameters.iterations * 100)
-
         if transformation:
             if not callable(transformation):
                 raise ValueError("The transformations need to be a function.")
-            image = transformation(image)
-        else:
-            image = trans.standard_transformation(image)
+            tf_image = transformation(tf_image)
 
-        activation, image = gradient_ascent_step(
-            image, feature_extractor, regularization, optimization_parameters, minimize,
+            if tf_image.shape[1] != image.shape[1] or tf_image.shape[2] != image.shape[2]:
+                tf_image = tf.image.resize(tf_image, [image.shape[1], image.shape[2]])
+
+        activation, tf_image = gradient_ascent_step(
+            tf_image, feature_extractor, regularization, optimization_parameters, minimize,
             filter_index=filter_index)
 
-        print('>>', pctg, '%', end="\r", flush=True)
+        print('>>', int(iteration / optimization_parameters.iterations * 100), '%',
+              end="\r", flush=True)
 
         # Routine for creating a threshold image for Jupyter Notebooks
         if isinstance(threshold, list) and (iteration in threshold):
@@ -79,22 +78,20 @@ def visualize(
                 1, len(threshold), threshold.index(iteration) + 1
             )
             threshold_image.title.set_text(f"Step {iteration}")
-            threshold_view(image)
+            threshold_view(tf_image)
 
     print('>> 100 %')
-    if image.shape[1] < 299 or image.shape[2] < 299:
-        image = tf.image.resize(image, [299, 299])
 
     # Decode the resulting input image when gradient ascent is used.
     if (minimize is False) and (optimization_parameters.optimizer is None):
-        image = imgs.deprocess_image(image[0].numpy())
+        tf_image = imgs.deprocess_image(tf_image[0].numpy())
     else:
-        image = image[0].numpy()
+        tf_image = tf_image[0].numpy()
 
-    return activation, image
+    return activation, tf_image
 
 
-def compute_activation(input_image, model,  regularization, filter_index=None):
+def compute_activation(input_image, model, regularization, filter_index=None):
     """Computes the loss for the feature visualization process.
 
     Args:
@@ -143,7 +140,8 @@ def gradient_ascent_step(img, model, regularization, optimization_parameters,
         with tf.GradientTape() as tape:
             tape.watch(img)
             activation = compute_activation(
-                img, model, filter_index, regularization)
+                input_image=img, model=model, regularization=regularization,
+                filter_index=filter_index)
 
         # Compute gradients.
         grads = tape.gradient(activation, img)
