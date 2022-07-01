@@ -224,6 +224,6 @@ def to_valid_rgb(image, decorrelate=False, sigmoid=True):
     if sigmoid:
         image = tf.nn.sigmoid(image)
     else:
-        image = (2 * image - 1 / tf.maximum(1.0,
-                 tf.abs(2 * image - 1))) / 2 + 0.5
+        val = (2 * image - 1)
+        image = (val / tf.maximum(1.0, tf.abs(val))) / 2 + 0.5
     return image
