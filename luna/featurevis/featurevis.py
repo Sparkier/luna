@@ -13,7 +13,7 @@ from matplotlib.pyplot import figure, imshow, axis
 
 from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
-from luna.featurevis import objectives as objectives
+from luna.featurevis import objectives
 
 @dataclass
 class OptimizationParameters():
@@ -34,7 +34,7 @@ def visualize(
 
     Args:
         image (array): the image to be modified by the feature vis process.
-        objective (object): computes the activation to optimize visualization for, e.g., filter or layer.
+        objective (object): computes the loss to optimize visualization for (filter or layer).
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
         filter_index (number): the index of the filter to be visualized. Whole layer if None.
         transformations (function): a function defining the transformations to be perfromed.
@@ -113,7 +113,6 @@ def visualize_filter(
     """
     objective = objectives.FilterObjective(model, layer, filter_index, regularization)
     return visualize(image, objective, optimization_parameters, transformation, threshold, minimize)
-    
 
 def visualize_layer(
     image,
@@ -149,7 +148,7 @@ def gradient_ascent_step(img, objective, optimization_parameters, minimize):
 
       Args:
           img (array): the image to be changed by the gradiend ascend.
-          objective (object): computes the activation to optimize visualization for, e.g., filter or layer.
+          objective (object): computes the loss to optimize visualization for (filter or layer).
           optimization_parameters (OptimizationParameters): optimizer (only Adam is supported)
           minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
                            for adam optimizer.

@@ -1,14 +1,18 @@
+"""
+Methods for computing the loss for which to optimize the visualization for.
+"""
 import tensorflow as tf
 
-class FilterObjective(object):
+
+class FilterObjective:
     """ Feature visualization of a given filter in a layer of a model.
-        Computes the mean activation of the specified filter. 
+        Computes the mean activation of the specified filter.
     """
-        
+
     def __init__(self, model, layer, filter_index, regularization=None):
         """ Feature visualization of a given filter in a layer of a model.
             Computes the mean activation of the filter.
-            Args: 
+            Args:
                 model (object): the model to be used for the feature visualization.
                 layer (string): the name of the layer to be used in the visualization.
                 filter_index (number): the index of the filter to be visualized.
@@ -37,17 +41,23 @@ class FilterObjective(object):
         if self.regularization:
             if not callable(self.regularization):
                 raise ValueError("The regularizations need to be a function.")
-            activation_score = self.regularization(activation, activation_score)
+            activation_score = self.regularization(
+                activation, activation_score)
         return -activation_score
 
-class LayerObjective(object):
+    def __repr__(self) -> str:
+        return f"FilterObjective({self.model}, {self.filter_index}, {self.regularization})"
+
+
+class LayerObjective:
     """ Deepdream visualization of a layer, see Mordvintsev et al. 2015.
         Computes (mean activation)^2 of the input.
     """
+
     def __init__(self, model, layer, regularization=None):
         """ Deepdream visualization of a layer, see Mordvintsev et al. 2015.
             Computes (mean activation)^2 of the input.
-            Args: 
+            Args:
                 model (object): the model to be used for the feature visualization.
                 layer (string): the name of the layer to be used in the visualization.
                 regularization (function): customized regularizers to be applied. Defaults to None.
@@ -70,8 +80,13 @@ class LayerObjective(object):
         if self.regularization:
             if not callable(self.regularization):
                 raise ValueError("The regularizations need to be a function.")
-            activation_score = self.regularization(activation, activation_score)
+            activation_score = self.regularization(
+                activation, activation_score)
         return -activation_score
+
+    def __repr__(self) -> str:
+        return f"LayerObjective({self.model}, {self.regularization})"
+
 
 def get_feature_extractor(model, layer_name):
     """Builds a model that that returns the activation of the specified layer.
@@ -82,5 +97,3 @@ def get_feature_extractor(model, layer_name):
     """
     layer = model.get_layer(name=layer_name)
     return tf.keras.Model(inputs=model.inputs, outputs=layer.output)
-
-

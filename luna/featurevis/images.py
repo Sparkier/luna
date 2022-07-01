@@ -16,7 +16,7 @@ MAX_NORM_SVD_SQRT = np.max(np.linalg.norm(COLOR_CORRELATION_SVD_SQRT, axis=0))
 COLOR_MEAN = [0.48, 0.46, 0.41]
 
 
-def initialize_image(width, height, channels = 3, val_range_top=1.0, val_range_bottom=-1.0):
+def initialize_image(width, height, channels=3, val_range_top=1.0, val_range_bottom=-1.0):
     """
     Creates an initial randomized image to start feature vis process.
     This could be subject to optimization in the future.
@@ -29,13 +29,16 @@ def initialize_image(width, height, channels = 3, val_range_top=1.0, val_range_b
         A randomly generated image.
     """
     print("initializing image")
-    if channels != 1 and channels != 3:
-        raise ValueError("Only 1 and 3 image channels are currently supported.")
+    if channels not in (1, 3):
+        raise ValueError(
+            "Only 1 and 3 image channels are currently supported.")
     # We start from a gray image with some random noise
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        img = tf.random.uniform((1, channels, width, height), dtype=tf.dtypes.float32)
+        img = tf.random.uniform(
+            (1, channels, width, height), dtype=tf.dtypes.float32)
     else:
-        img = tf.random.uniform((1, width, height, channels), dtype=tf.dtypes.float32)
+        img = tf.random.uniform(
+            (1, width, height, channels), dtype=tf.dtypes.float32)
     # rescale values to be in the middle quarter of possible values
     img = (img - 0.5) * 0.25 + 0.5
     val_range = val_range_top - val_range_bottom
@@ -109,21 +112,20 @@ def initialize_image_ref(
         A randomly generated image.
     """
     print("initializing image")
-    # We start from a gray image with some random noise
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        img = tf.random.uniform((1, channels, width, height), dtype=tf.dtypes.float32)
+        shape = (1, channels, width, height)
     else:
-        img = tf.random.uniform((1, width, height, channels), dtype=tf.dtypes.float32)
+        shape = (1, width, height, channels)
 
     if fft:
-        image_f = fft_image(img, std=std)
+        image_f = fft_image(shape, std=std)
     else:
         std = std or 0.01
         if seed is not None:
             np.random.seed(seed)
         image_f = np.random.normal(
-            size=[img.shape[0], img.shape[1],
-                  img.shape[2], img.shape[3]], scale=std
+            size=[shape[0], shape[1],
+                  shape[2], shape[3]], scale=std
         ).astype(np.float32)
 
     if channels == 3:
@@ -131,11 +133,11 @@ def initialize_image_ref(
             image_f[..., :3], decorrelate=decorrelate, sigmoid=True)
     else:
         output = tf.nn.sigmoid(image_f)
-    
+
     return output
 
 
-def fft_image(img, std=None, decay_power=1):
+def fft_image(shape, std=None, decay_power=1):
     """Image parameterization using 2D Fourier coefficients.
 
     Args:
@@ -146,16 +148,6 @@ def fft_image(img, std=None, decay_power=1):
     Returns:
         New image in spatial domain.
     """
-    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        shape = [img.shape[0], img.shape[1], img.shape[2], img.shape[3]]
-    else:
-        shape = [
-            img.shape[0],
-            img.shape[3],
-            img.shape[1],
-            img.shape[2],
-        ]  # [batch, ch, h, w]
-
     batch, channels, height, width = shape
     # real valued fft
     freqs = rfft2d_freqs(height, width)
