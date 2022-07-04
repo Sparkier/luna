@@ -33,12 +33,9 @@ def initialize_image(width, height, channels=3, val_range_top=1.0, val_range_bot
         raise ValueError(
             "Only 1 and 3 image channels are currently supported.")
     # We start from a gray image with some random noise
-    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        img = tf.random.uniform(
-            (1, channels, width, height), dtype=tf.dtypes.float32)
-    else:
-        img = tf.random.uniform(
-            (1, width, height, channels), dtype=tf.dtypes.float32)
+    shape = _to_img_shape(width, height, channels)
+    img = tf.random.uniform(shape, dtype=tf.dtypes.float32)
+
     # rescale values to be in the middle quarter of possible values
     img = (img - 0.5) * 0.25 + 0.5
     val_range = val_range_top - val_range_bottom
@@ -118,15 +115,13 @@ def initialize_image_ref(
         shape = (1, width, height, channels)
 
     if fft:
-        image_f = fft_image(shape, std=std)
+        image_f = fft_image(width, height, channels, std=std)
     else:
         std = std or 0.01
         if seed is not None:
             np.random.seed(seed)
-        image_f = np.random.normal(
-            size=[shape[0], shape[1],
-                  shape[2], shape[3]], scale=std
-        ).astype(np.float32)
+        shape = _to_img_shape(width, height, channels)
+        image_f = np.random.normal(size=shape, scale=std).astype(np.float32)
 
     if channels == 3:
         output = to_valid_rgb(
@@ -137,7 +132,7 @@ def initialize_image_ref(
     return output
 
 
-def fft_image(shape, std=None, decay_power=1):
+def fft_image(width, height, channels=3, std=None, decay_power=1):
     """Image parameterization using 2D Fourier coefficients.
 
     Args:
@@ -148,10 +143,9 @@ def fft_image(shape, std=None, decay_power=1):
     Returns:
         New image in spatial domain.
     """
-    batch, channels, height, width = shape
     # real valued fft
     freqs = rfft2d_freqs(height, width)
-
+    batch = 1
     init_val_size = (2, batch, channels) + freqs.shape
     spectrum_real_imag_t = tf.Variable(np.random.normal(
         size=init_val_size, scale=(std or 0.01)).astype(np.float32))
@@ -204,6 +198,26 @@ def _linear_decorrelate_color(image):
     t_flat = tf.matmul(t_flat, color_correlation_normalized.T)
     image = tf.reshape(t_flat, tf.shape(image))
     return image
+
+
+def _to_img_shape(width, height, channels=3, batch=1):
+    """Returns image dimensions depending on tensorflow channels first backend format.
+
+    Args:
+        width (int): Image width.
+        height (int): Image height.
+        channels (int): Number of image channels.
+        batch (int): Batch size.
+
+    Returns:
+        (batch, channels, width, height) if channels_first,
+        otherwise (batch, width, height, channels).
+    """
+
+    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
+        return (batch, channels, width, height)
+
+    return (batch, width, height, channels)
 
 
 def to_valid_rgb(image, decorrelate=False, sigmoid=True):
