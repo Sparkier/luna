@@ -15,12 +15,14 @@ from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import objectives
 
+
 @dataclass
 class OptimizationParameters():
     """object for generalizing optimization parameters."""
     iterations: int
     learning_rate: Optional[int]
     optimizer: Optional[object]
+
 
 def visualize(
     image,
@@ -37,7 +39,7 @@ def visualize(
         objective (object): computes the loss to optimize visualization for (filter or layer).
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
         filter_index (number): the index of the filter to be visualized. Whole layer if None.
-        transformations (function): a function defining the transformations to be perfromed.
+        transformation (function): a function defining the transformations to be performed.
         threshold (list): Intermediate steps for visualization. Defaults to None.
         minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
                          for adam optimizer.
@@ -45,22 +47,24 @@ def visualize(
     Returns:
         tuple: activation and result image for the process.
     """
-    tf_image = tf.Variable(image)
     _threshold_figures = figure(figsize=(15, 10), dpi=200)
 
-    print("Starting Feature Vis Process")
-    for iteration in range(optimization_parameters.iterations):
+    def transform_image(img):
         if transformation:
             if not callable(transformation):
-                raise ValueError("The transformations need to be a function.")
-            tf_image = transformation(tf_image)
+                raise ValueError("transformation needs to be a function.")
+            transformed = transformation(img)
 
-            if tf_image.shape[1] != image.shape[1] or tf_image.shape[2] != image.shape[2]:
-                tf_image = tf.image.resize(tf_image, [image.shape[1], image.shape[2]])
+            if transformed.shape[1] != img.shape[1] or transformed.shape[2] != img.shape[2]:
+                transformed = tf.image.resize(
+                    transformed, [img.shape[1], img.shape[2]])
+            return transformed
+        return img
+    print("Starting Feature Vis Process")
+    for iteration in range(optimization_parameters.iterations):
 
-        activation, tf_image = gradient_ascent_step(
-            tf_image, objective, optimization_parameters, minimize=minimize
-        )
+        activation, image = optimize(
+            image, objective, transform_image, optimization_parameters, minimize)
 
         print('>>', int(iteration / optimization_parameters.iterations * 100), '%',
               end="\r", flush=True)
@@ -71,17 +75,18 @@ def visualize(
                 1, len(threshold), threshold.index(iteration) + 1
             )
             threshold_image.title.set_text(f"Step {iteration}")
-            threshold_view(tf_image)
+            threshold_view(image)
 
     print('>> 100 %')
 
     # Decode the resulting input image when gradient ascent is used.
     if (minimize is False) and (optimization_parameters.optimizer is None):
-        tf_image = imgs.deprocess_image(tf_image[0].numpy())
+        image = imgs.deprocess_image(image[0].numpy())
     else:
-        tf_image= tf_image[0].numpy()
+        image = image[0].numpy()
 
-    return activation, tf_image
+    return activation, image
+
 
 def visualize_filter(
     image,
@@ -92,7 +97,7 @@ def visualize_filter(
     transformation=None,
     regularization=None,
     threshold=None,
-    minimize = False
+    minimize=False
 ):
     """Create a feature visualization for a filter in a layer of the model.
 
@@ -102,7 +107,7 @@ def visualize_filter(
         layer (string): the name of the layer to be used in the visualization.
         filter_index (number): the index of the filter to be visualized.
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
-        transformations (function): a function defining the transformations to be perfromed.
+        transformation (function): a function defining the transformations to be performed.
         regularization (function): customized regularizers to be applied. Defaults to None.
         threshold (list): Intermediate steps for visualization. Defaults to None.
         minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
@@ -111,8 +116,10 @@ def visualize_filter(
     Returns:
         tuple: activation and result image for the process.
     """
-    objective = objectives.FilterObjective(model, layer, filter_index, regularization)
+    objective = objectives.FilterObjective(
+        model, layer, filter_index, regularization)
     return visualize(image, objective, optimization_parameters, transformation, threshold, minimize)
+
 
 def visualize_layer(
     image,
@@ -122,7 +129,7 @@ def visualize_layer(
     transformation=None,
     regularization=None,
     threshold=None,
-    minimize = False
+    minimize=False
 ):
     """Create deep dream visualization of a layer in the model.
 
@@ -131,7 +138,7 @@ def visualize_layer(
         model (object): the model to be used for the feature visualization.
         layer (string): the name of the layer to be used in the visualization.
         optimization_parameters (OptimizationParameters): the optimizer class to be applied.
-        transformations (function): a function defining the transformations to be perfromed.
+        transformation (function): a function defining the transformations to be performed.
         regularization (function): customized regularizers to be applied. Defaults to None.
         threshold (list): Intermediate steps for visualization. Defaults to None.
         minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
@@ -143,12 +150,14 @@ def visualize_layer(
     objective = objectives.LayerObjective(model, layer, regularization)
     return visualize(image, objective, optimization_parameters, transformation, threshold, minimize)
 
-def gradient_ascent_step(img, objective, optimization_parameters, minimize):
+
+def optimize(img, objective, transform_image, optimization_parameters, minimize):
     """Performs one step of gradient ascent.
 
       Args:
           img (array): the image to be changed by the gradiend ascend.
           objective (object): computes the loss to optimize visualization for (filter or layer).
+          transform_image (function): a function defining the transformations to be performed.
           optimization_parameters (OptimizationParameters): optimizer (only Adam is supported)
           minimize (bool): whether or not to apply minimize as opposed to calling apply_gradient()
                            for adam optimizer.
@@ -158,11 +167,15 @@ def gradient_ascent_step(img, objective, optimization_parameters, minimize):
           tuple: the activation and the modified image
     """
     img = tf.Variable(img)
+
+    def loss():
+        transformed_image = transform_image(img)
+        return objective.loss(transformed_image)
+
     if not minimize:
         with tf.GradientTape() as tape:
             tape.watch(img)
-            activation = -objective.loss(img)
-
+            activation = -loss()
         # Compute gradients.
         grads = tape.gradient(activation, img)
 
@@ -175,11 +188,11 @@ def gradient_ascent_step(img, objective, optimization_parameters, minimize):
         else:
             grads_relu_0 = rg.redirected_relu_grad(img, grads*-1)
             grads_modified = rg.redirected_relu6_grad(img, grads_relu_0)
-            optimization_parameters.optimizer.apply_gradients(zip([grads_modified], [img]))
+            optimization_parameters.optimizer.apply_gradients(
+                zip([grads_modified], [img]))
     else:
-        def compute_loss():
-            return objective.loss(img)
-        activation = optimization_parameters.optimizer.minimize(compute_loss, [img])
+        activation = optimization_parameters.optimizer.minimize(loss, [img])
+
     return activation, img
 
 
