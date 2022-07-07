@@ -11,7 +11,6 @@ from tensorflow import keras
 
 from matplotlib.pyplot import figure, imshow, axis
 
-from luna.featurevis import relu_grad as rg
 from luna.featurevis import images as imgs
 from luna.featurevis import objectives
 
@@ -60,9 +59,11 @@ def visualize(
                     transformed, [img.shape[1], img.shape[2]])
             return transformed
         return img
+
+    # Can only compute gradients for variables
+    image = tf.Variable(image)
     print("Starting Feature Vis Process")
     for iteration in range(optimization_parameters.iterations):
-
         activation, image = optimize(
             image, objective, transform_image, optimization_parameters, minimize)
 
@@ -166,18 +167,19 @@ def optimize(img, objective, transform_image, optimization_parameters, minimize)
       Returns:
           tuple: the activation and the modified image
     """
-    img = tf.Variable(img)
 
-    def loss():
+    def compute_loss():
         transformed_image = transform_image(img)
         return objective.loss(transformed_image)
 
     if not minimize:
         with tf.GradientTape() as tape:
             tape.watch(img)
-            activation = -loss()
-        # Compute gradients.
-        grads = tape.gradient(activation, img)
+            # Record operations to compute gradients with respect to img
+            loss = compute_loss()
+
+        # Compute gradients with respect to img using backpropagation.
+        grads = tape.gradient(loss, img)
 
         # Normalize gradients.
         if optimization_parameters.optimizer is None:
@@ -186,12 +188,17 @@ def optimize(img, objective, transform_image, optimization_parameters, minimize)
             learning_rate = optimization_parameters.learning_rate or 0.7
             img = img + learning_rate * grads
         else:
-            grads_relu_0 = rg.redirected_relu_grad(img, grads*-1)
-            grads_modified = rg.redirected_relu6_grad(img, grads_relu_0)
+            # Relu gradient overrides do not seem to work,
+            # or needs to be performed more fine grained.
+            # grads_relu_0 = rg.redirected_relu_grad(img, grads)
+            # grads_modified = rg.redirected_relu6_grad(img, grads_relu_0)
+            # optimization_parameters.optimizer.apply_gradients(
+            #     zip([grads_modified], [img]))
             optimization_parameters.optimizer.apply_gradients(
-                zip([grads_modified], [img]))
+                zip([grads], [img]))
+        activation = -loss
     else:
-        activation = optimization_parameters.optimizer.minimize(loss, [img])
+        activation = optimization_parameters.optimizer.minimize(compute_loss, [img])
 
     return activation, img
 
