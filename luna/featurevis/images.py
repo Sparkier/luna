@@ -109,10 +109,7 @@ def initialize_image_ref(
         A randomly generated image.
     """
     print("initializing image")
-    if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
-        shape = (1, channels, width, height)
-    else:
-        shape = (1, width, height, channels)
+    shape = _to_img_shape(width, height, channels)
 
     if fft:
         image_f = fft_image(width, height, channels, std=std)
@@ -120,7 +117,6 @@ def initialize_image_ref(
         std = std or 0.01
         if seed is not None:
             np.random.seed(seed)
-        shape = _to_img_shape(width, height, channels)
         image_f = np.random.normal(size=shape, scale=std).astype(np.float32)
 
     if channels == 3:
@@ -200,20 +196,19 @@ def _linear_decorrelate_color(image):
     return image
 
 
-def _to_img_shape(width, height, channels=3, batch=1):
+def _to_img_shape(width, height, channels=3):
     """Returns image dimensions depending on tensorflow channels first backend format.
 
     Args:
         width (int): Image width.
         height (int): Image height.
         channels (int): Number of image channels.
-        batch (int): Batch size.
 
     Returns:
-        (batch, channels, width, height) if channels_first,
-        otherwise (batch, width, height, channels).
+        (1, channels, width, height) if channels_first,
+        otherwise (1, width, height, channels).
     """
-
+    batch = 1
     if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
         return (batch, channels, width, height)
 
