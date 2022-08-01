@@ -24,14 +24,12 @@ class FilterObjective:
 
     def loss(self, input_image):
         """Computes the loss for the feature visualization process.
-
         Args:
             input_image (array): the image that is used to compute the loss.
             model (object): the model on which to compute the loss.
         Returns:
             number: the loss for the specified setting
         """
-
         activation = self.model(input_image)
         if tf.compat.v1.keras.backend.image_data_format() == "channels_first":
             filter_activation = activation[:, self.filter_index, :, :]
@@ -67,14 +65,12 @@ class LayerObjective:
 
     def loss(self, input_image):
         """Computes the layer loss for the feature visualization process.
-
         Args:
             input_image (array): the image that is used to compute the loss.
             model (object): the model on which to compute the loss.
         Returns:
             number: the loss for the specified setting
         """
-
         activation = self.model(input_image)
         activation_score = tf.reduce_mean(activation**2)
         if self.regularization:
@@ -107,14 +103,12 @@ class LayerActivationObjective:
 
     def loss(self, input_image):
         """Computes the layer loss for the feature visualization process.
-
         Args:
             input_image (array): the image that is used to compute the loss.
             model (object): the model on which to compute the loss.
         Returns:
             number: the loss for the specified setting
         """
-
         activation = self.model(input_image)
         activation_score = -tf.reduce_mean((self.target_activation - activation)**2)
         if self.regularization:
