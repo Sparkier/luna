@@ -31,7 +31,9 @@ The following provides an example of how Luna can be used for feature visualizat
         return img
 
     opt_param = featurevis.OptimizationParameters(iterations, learning_rate, optimizer=optimizer)
-    activation, image= featurevis.visualize(image, model, layer="mixed5", optimization_parameters=opt_param, filter_index=30, transformation=my_trans)
+    # Visualize filter 30 within the mixed5 layer. Note that we use filter, while some use channel, to denote a unit within a layer.
+    objective = featurevis.objectives.FilterObjective(model, layer="mixed5", filter_index=30)
+    activation, image= featurevis.visualize(image, objective=objective, optimization_parameters=opt_param, transformation=my_trans)
 
     plt.imshow(image)
     plt.savefig("image.svg")
