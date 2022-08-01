@@ -72,7 +72,7 @@ class LayerObjective:
             input_image (array): the image that is used to compute the loss.
             model (object): the model on which to compute the loss.
         Returns:
-            number: the activation for the specified setting
+            number: the loss for the specified setting
         """
 
         activation = self.model(input_image)
@@ -86,6 +86,46 @@ class LayerObjective:
 
     def __repr__(self) -> str:
         return f"LayerObjective({self.model}, {self.regularization})"
+
+class LayerActivationObjective:
+    """ Targets a provided layer activation.
+        Computes (mean(target_activation - activation))^2.
+    """
+
+    def __init__(self, model, layer, target_activation, regularization=None):
+        """ For visualization of a specific target activation of a layer.
+            Computes (mean(target_activation - activation))^2 of the input.
+            Args:
+                model (object): the model to be used for the feature visualization.
+                layer (string): the name of the layer to be used in the visualization.
+                target_activation (array): the target activation.
+                regularization (function): customized regularizers to be applied. Defaults to None.
+        """
+        self.model = get_feature_extractor(model, layer)
+        self.regularization = regularization
+        self.target_activation = target_activation
+
+    def loss(self, input_image):
+        """Computes the layer loss for the feature visualization process.
+
+        Args:
+            input_image (array): the image that is used to compute the loss.
+            model (object): the model on which to compute the loss.
+        Returns:
+            number: the loss for the specified setting
+        """
+
+        activation = self.model(input_image)
+        activation_score = -tf.reduce_mean((self.target_activation - activation)**2)
+        if self.regularization:
+            if not callable(self.regularization):
+                raise ValueError("The regularizations need to be a function.")
+            activation_score = self.regularization(
+                activation, activation_score)
+        return -activation_score
+
+    def __repr__(self) -> str:
+        return f"ActivationObjective({self.model}, {self.regularization}, {self.target_activation})"
 
 
 def get_feature_extractor(model, layer_name):
